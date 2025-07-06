@@ -31,7 +31,7 @@ unsigned int Tick_toMsec(const Tick_t ticks);
 /**
  * @brief 检测是否超时, 溢出处理
  */
-bool Tick_after(Tick_t current_ticks, Tick_t target_ticks);
+bool Tick_after(const Tick_t current_ticks, const Tick_t target_ticks);
 
 /**
  * 增加tick, 内核调用

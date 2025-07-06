@@ -18,7 +18,7 @@ unsigned int Tick_toMsec(const Tick_t ticks) {
     return (ticks * 1000UL + (INTERRUPT_HZ - 1)) / INTERRUPT_HZ;
 }
 
-bool Tick_after(Tick_t current_ticks, Tick_t target_ticks) {
+bool Tick_after(const Tick_t current_ticks, const Tick_t target_ticks) {
     return (STick_t)(target_ticks - current_ticks) < 0;
 }
 

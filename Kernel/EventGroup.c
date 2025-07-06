@@ -4,7 +4,8 @@
 #include <stddef.h>
 
 /* 创建一个事件组 */
-void EventGroup_new(struct EventGroup *event_group, enum EventType events, enum EventTrigLogic tri_logic) {
+void EventGroup_new(struct EventGroup *const event_group,
+                    const enum EventType events, const enum EventTrigLogic tri_logic) {
     event_group->events = events;
     event_group->current_events = events;
     event_group->tri_logic = tri_logic;
@@ -12,10 +13,13 @@ void EventGroup_new(struct EventGroup *event_group, enum EventType events, enum 
 }
 
 /* 监听事件 */
-bool EventGroup_listen(struct EventGroup *event_group) {
+bool EventGroup_listen(struct EventGroup *const event_group) {
+    if (event_group == NULL) {
+        return false;
+    }
     while (!event_group->is_triggered) {
         Task_suspendScheduling();
-        struct TaskStruct *task = TaskList_moveFrontActiveTaskToEventList();
+        struct TaskStruct *const task = TaskList_moveFrontActiveTaskToEventList();
         Task_resumeScheduling();
 
         if (task == NULL) {
@@ -38,7 +42,10 @@ bool EventGroup_listen(struct EventGroup *event_group) {
 }
 
 /* 触发事件 */
-void EventGroup_trigger(struct EventGroup *event_group, enum EventType events) {
+void EventGroup_trigger(struct EventGroup *const event_group, const enum EventType events) {
+    if (event_group == NULL) {
+        return;
+    }
     Task_suspendScheduling();
     for (struct TaskListNode *prev_node = NULL, *node = TaskList_getFrontEventTaskNode();
          node != NULL; prev_node = node, node = node->next) {

@@ -46,7 +46,7 @@ static __forceinline void TaskList_init() {
 }
 
 /* 将节点添加到活跃列表尾部 */
-static void TaskList_push(struct TaskListNode *node) {
+static void TaskList_push(struct TaskListNode *const node) {
     node->next = NULL;
     task_list_tail->next = node;
     task_list_tail = task_list_tail->next;
@@ -58,7 +58,7 @@ static struct TaskListNode *TaskList_pop() {
         return NULL;
     }
 
-    struct TaskListNode *front_node = task_list_head->next;
+    struct TaskListNode *const front_node = task_list_head->next;
 
     /* 从活跃列表中移除 */
     task_list_head->next = front_node->next;
@@ -104,7 +104,7 @@ struct TaskStruct *TaskList_getFrontActiveTask() {
 
 /* 将第一个活跃任务节点放到链表尾部 */
 void TaskList_moveFrontActiveTaskToBack() {
-    struct TaskListNode *front_node = TaskList_pop();
+    struct TaskListNode *const front_node = TaskList_pop();
 
     if (front_node == NULL) {
         return;
@@ -123,8 +123,8 @@ bool TaskList_hasBlockedTask() {
 }
 
 /* 将第一个活跃任务移动到阻塞列表 */
-void TaskList_moveFrontActiveTaskToBlockedList(Tick_t blocking_ticks) {
-    struct TaskListNode *front_node = TaskList_pop();
+void TaskList_moveFrontActiveTaskToBlockedList(const Tick_t blocking_ticks) {
+    struct TaskListNode *const front_node = TaskList_pop();
 
     if (front_node == NULL) {
         return;
@@ -188,7 +188,7 @@ struct TaskListNode *TaskList_getFrontEventTaskNode() {
 
 /* 将第一个活跃任务移动到事件列表 */
 struct TaskStruct *TaskList_moveFrontActiveTaskToEventList() {
-    struct TaskListNode *front_node = TaskList_pop();
+    struct TaskListNode *const front_node = TaskList_pop();
 
     if (front_node == NULL) {
         return NULL;
@@ -204,9 +204,9 @@ struct TaskStruct *TaskList_moveFrontActiveTaskToEventList() {
     return front_node->task;
 }
 
-/* 将事件任务节点放回到活跃列表尾部并返回前一个节点 */
-void TaskList_putEventTaskToActiveListBack(struct TaskListNode *prev_node,
-                                           struct TaskListNode *node) {
+/* 将事件任务节点放回到活跃列表尾部 */
+void TaskList_putEventTaskToActiveListBack(struct TaskListNode *const prev_node,
+                                           struct TaskListNode *const node) {
     if (node == event_task_list_head) {
         event_task_list_head = event_task_list_head->next;
     } else {
@@ -232,7 +232,7 @@ struct TaskListNode *TaskList_getFrontMessageTaskNode() {
 
 /* 将第一个活跃任务移动到消息列表 */
 struct TaskStruct *TaskList_moveFrontActiveTaskToMessageList() {
-    struct TaskListNode *front_node = TaskList_pop();
+    struct TaskListNode *const front_node = TaskList_pop();
 
     if (front_node == NULL) {
         return NULL;
@@ -249,8 +249,8 @@ struct TaskStruct *TaskList_moveFrontActiveTaskToMessageList() {
 }
 
 /* 将消息任务节点放回到活跃列表尾部并返回前一个节点 */
-void TaskList_putMessageTaskToActiveListBack(struct TaskListNode *prev_node,
-                                             struct TaskListNode *node) {
+void TaskList_putMessageTaskToActiveListBack(struct TaskListNode *const prev_node,
+                                             struct TaskListNode *const node) {
     if (node == message_task_list_head) {
         message_task_list_head = message_task_list_head->next;
     } else {

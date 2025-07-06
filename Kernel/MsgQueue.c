@@ -4,8 +4,8 @@
 #include <stddef.h>
 
 /* 创建一个消息队列 */
-void MsgQueue_new(struct MsgQueue *msg_queue,
-                  size_t type, void *buffer, size_t buffer_size) {
+void MsgQueue_new(struct MsgQueue *const msg_queue,
+                  const size_t type, void *const buffer, const size_t buffer_size) {
     msg_queue->type = type;
     msg_queue->buffer = buffer;
     msg_queue->buffer_size = buffer_size;
@@ -15,17 +15,17 @@ void MsgQueue_new(struct MsgQueue *msg_queue,
 }
 
 /* 检查队列是否为空 */
-static bool MsgQueue_isEmpty(struct MsgQueue *msg_queue) {
+static bool MsgQueue_isEmpty(struct MsgQueue *const msg_queue) {
     return (msg_queue->count == 0);
 }
 
 /* 检查队列是否已满 */
-static bool MsgQueue_isFull(struct MsgQueue *msg_queue) {
+static bool MsgQueue_isFull(struct MsgQueue *const msg_queue) {
     return (msg_queue->count == msg_queue->buffer_size);
 }
 
 /* 发送消息 */
-bool MsgQueue_send(struct MsgQueue *msg_queue, void *data) {
+bool MsgQueue_send(struct MsgQueue *const msg_queue, void *const data) {
     Task_suspendScheduling();
     for (struct TaskListNode *prev_node = NULL, *node = TaskList_getFrontMessageTaskNode();
          node != NULL; prev_node = node, node = node->next) {
@@ -55,10 +55,10 @@ bool MsgQueue_send(struct MsgQueue *msg_queue, void *data) {
 }
 
 /* 接收消息 */
-bool MsgQueue_receive(struct MsgQueue *msg_queue, void *data) {
+bool MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data) {
     while (MsgQueue_isEmpty(msg_queue)) {
         Task_suspendScheduling();
-        struct TaskStruct *task = TaskList_moveFrontActiveTaskToMessageList();
+        struct TaskStruct *const task = TaskList_moveFrontActiveTaskToMessageList();
         Task_resumeScheduling();
 
         if (task == NULL) {

@@ -28,10 +28,11 @@ volatile struct TaskStruct *current_task = NULL;
 static struct TaskStruct task_structures[TASK_MAX_NUM];
 static uint16_t task_structures_pos = 0;
 
-static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*fn)(void *), void *arg);
+static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
 static void ErrorReturnHandler(void);
 static void Task_startFirstTask(void);
-static struct TaskStruct *Task_newTaskStruct(Stack_t *stack, Stack_t *top_of_stack);
+static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack);
+static void Task_deleteTaskStruct(struct TaskStruct *const task);
 
 void Task_suspendScheduling() {
     ++scheduling_suspended;
@@ -43,7 +44,8 @@ void Task_resumeScheduling() {
     }
 }
 
-bool Task_create(void (*fn)(void *), void *arg, Stack_t *stack, Stack_t stack_size) {
+bool Task_create(void (*const fn)(void *), void *const arg,
+                 Stack_t *const stack, const Stack_t stack_size) {
     if (fn == NULL || stack == NULL) {
         return false;
     }
@@ -54,12 +56,16 @@ bool Task_create(void (*fn)(void *), void *arg, Stack_t *stack, Stack_t stack_si
     Stack_t *top_of_stack = &stack[stack_size - (Stack_t)1];
     top_of_stack = (Stack_t *)(((uint32_t)top_of_stack) & (~((uint32_t)(BYTE_ALIGNMENT - 1))));
 
-    struct TaskStruct* task = Task_newTaskStruct(stack, Task_initTaskStack(top_of_stack, fn, arg));
+    struct TaskStruct* task = Task_newTaskStruct(
+        stack,
+        Task_initTaskStack(top_of_stack, fn, arg)
+    );
     if (task == NULL) {
         return false;
     }
 
     if (!TaskList_pushNewTask(task)) {
+        Task_deleteTaskStruct(task);
         return false;
     }
 
@@ -72,7 +78,7 @@ bool Task_create(void (*fn)(void *), void *arg, Stack_t *stack, Stack_t stack_si
     return true;
 }
 
-void Task_delay(Tick_t ticks) {
+void Task_delay(const Tick_t ticks) {
     if (ticks > 0) {
         Task_suspendScheduling();
         TaskList_moveFrontActiveTaskToBlockedList(Tick_getCurrentTicks() + ticks);
@@ -112,7 +118,7 @@ int Task_exec() {
 }
 
 /* 创建任务对象 */
-static struct TaskStruct *Task_newTaskStruct(Stack_t *stack, Stack_t *top_of_stack) {
+static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack) {
     const struct TaskStruct task = {
         .stack = stack,
         .top_of_stack = top_of_stack,
@@ -120,7 +126,7 @@ static struct TaskStruct *Task_newTaskStruct(Stack_t *stack, Stack_t *top_of_sta
 
     if (task_structures_pos >= TASK_MAX_NUM) {
         /* 尝试查找未使用的空间块 */
-        for (uint16_t i = 0; i < TASK_MAX_NUM; ++i) {
+        for (size_t i = 0; i < TASK_MAX_NUM; ++i) {
             if (task_structures[i].stack == NULL) {
                 task_structures[i] = task;
                 return &task_structures[i];
@@ -136,8 +142,18 @@ static struct TaskStruct *Task_newTaskStruct(Stack_t *stack, Stack_t *top_of_sta
     return new_task;
 }
 
+/* 删除任务对象 */
+static void Task_deleteTaskStruct(struct TaskStruct *const task) {
+    for (size_t i = 0; i < TASK_MAX_NUM; ++i) {
+        if (&task_structures[i] == task) {
+            task_structures[i].stack = NULL;
+            break;
+        }
+    }
+}
+
 /* 初始化任务栈 */
-static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*fn)(void *), void *arg) {
+static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
     /* xPSR寄存器 */
     *(--top_of_stack) = 0x01000000; /* 以Thumb指令模式执行(内存受限场景, Cortex-M平台要求) */
     /* PC寄存器 */

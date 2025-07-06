@@ -33,8 +33,8 @@ struct MsgQueue {
  * @param buffer 消息缓冲区
  * @param buffer_size 缓冲区大小
  */
-void MsgQueue_new(struct MsgQueue *msg_queue,
-                  size_t type, void *buffer, size_t buffer_size);
+void MsgQueue_new(struct MsgQueue *const msg_queue,
+                  const size_t type, void *const buffer, const size_t buffer_size);
 
 /**
  * @brief 发送消息
@@ -42,7 +42,7 @@ void MsgQueue_new(struct MsgQueue *msg_queue,
  * @param data 消息内容
  * @return 是否发送成功
  */
-bool MsgQueue_send(struct MsgQueue *msg_queue, void *data);
+bool MsgQueue_send(struct MsgQueue *const msg_queue, void *const data);
 
 /**
  * @brief 接收消息
@@ -50,6 +50,6 @@ bool MsgQueue_send(struct MsgQueue *msg_queue, void *data);
  * @param data 消息存放变量
  * @return 是否接收成功
  */
-bool MsgQueue_receive(struct MsgQueue *msg_queue, void *data);
+bool MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
 
 #endif /* _MsgQueue_h */
