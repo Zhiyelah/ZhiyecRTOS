@@ -55,7 +55,7 @@ void *Memory_alloc(size_t size) {
         Task_resumeScheduling();
     }
 
-    if ((size == 0) || (memory_pool_size < size)) {
+    if (size == 0) {
         return NULL;
     }
 
@@ -63,6 +63,10 @@ void *Memory_alloc(size_t size) {
 
     if (size & (BYTE_ALIGNMENT - 1)) {
         size += BYTE_ALIGNMENT - (size & (BYTE_ALIGNMENT - 1));
+    }
+
+    if (memory_pool_size < size) {
+        return NULL;
     }
 
     Task_suspendScheduling();
