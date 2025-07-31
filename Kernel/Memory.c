@@ -115,6 +115,11 @@ void Memory_free(void *const ptr) {
     }
 
     prev_mem_block->next_mem_block = mem_block_info->next_mem_block;
+    memory_pool_size += mem_block_info->size;
 
     Task_resumeScheduling();
+}
+
+size_t Memory_getFreeSize() {
+    return memory_pool_size;
 }

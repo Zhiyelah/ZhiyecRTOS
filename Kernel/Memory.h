@@ -21,4 +21,10 @@ void *Memory_alloc(size_t size);
  */
 void Memory_free(void *const ptr);
 
+/**
+ * @brief 获取空闲内存大小
+ * @return 空闲内存大小
+ */
+size_t Memory_getFreeSize(void);
+
 #endif /* _Memory_h */
