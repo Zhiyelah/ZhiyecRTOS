@@ -1,13 +1,15 @@
 /**
  * @file EventGroup.h
  * @author Zhiyelah
- * @brief 事件处理
+ * @brief 事件组(可选的)
  */
 
 #ifndef _EventGroup_h
 #define _EventGroup_h
 
+#include "TaskList.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 enum EventTrigLogic {
     EVENT_TRIG_ANY = 0U,
@@ -22,21 +24,29 @@ enum EventType {
 };
 
 struct EventGroup {
-    /* 事件类型 */
-    enum EventType events;
-    /* 剩余未触发事件 */
-    enum EventType current_events;
+    /* 事件数 */
+    volatile enum EventType events;
+    /* 重置的事件数 */
+    enum EventType reset_events;
     /* 触发逻辑 */
     enum EventTrigLogic tri_logic;
-    /* 第二位表示触发标志 */
-    bool is_triggered;
+    /* 等待事件触发的任务 */
+    struct TaskListNode *tasks_waiting_triggered;
+    /* 任务数 */
+    size_t tasks_count;
 };
 
 /**
  * @brief 创建一个事件组
  * @param event_group 事件组对象
- * @param events 事件类型
- * @param tri_logic 触发逻辑
+ * @param events 事件类型, 可以是下列的其中一个:
+ *          EVENT_INPUTDEVICE,
+            EVENT_TIMER,
+            EVENT_HARDWAREINT,
+            EVENT_CUSTOM
+ * @param tri_logic 触发逻辑, 可以是下列的其中一个:
+            EVENT_TRIG_ANY,
+            EVENT_TRIG_ALL
  */
 void EventGroup_new(struct EventGroup *const event_group,
                     const enum EventType events, const enum EventTrigLogic tri_logic);
@@ -51,7 +61,11 @@ bool EventGroup_listen(struct EventGroup *const event_group);
 /**
  * @brief 触发事件
  * @param event_group 事件组对象
- * @param events 事件类型
+ * @param events 事件类型, 可以是下列的其中一个:
+ *          EVENT_INPUTDEVICE,
+            EVENT_TIMER,
+            EVENT_HARDWAREINT,
+            EVENT_CUSTOM
  */
 void EventGroup_trigger(struct EventGroup *const event_group, const enum EventType events);
 

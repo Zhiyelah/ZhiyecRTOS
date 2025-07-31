@@ -1,35 +1,35 @@
 #include "Task.h"
-#include "Interrupt.h"
-#include "Tick.h"
 #include "TaskList.h"
+#include "Hook.h"
 #include <stddef.h>
-#include "Config.h"
 
-/* 内存字节对齐位 */
-#define BYTE_ALIGNMENT 8
-
-#define Systick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
-#define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
-#define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
-
-#define INTERRUPT_HZ (CONFIG_INTERRUPT_HZ)
+#define SYSTICK_RATE_HZ (CONFIG_SYSTICK_RATE_HZ)
 #define CPU_CLOCK_HZ (CONFIG_CPU_CLOCK_HZ)
-#define SYSTICK_LOAD_REG_VALUE (CPU_CLOCK_HZ / INTERRUPT_HZ)
+#define SYSTICK_LOAD_REG_VALUE (CPU_CLOCK_HZ / SYSTICK_RATE_HZ)
 
-#define MAX_SYSCALL_INTERRUPT_PRIORITY (CONFIG_MAX_SYSCALL_INTERRUPT_PRIORITY)
+#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
+
+#define DEFAULT_TASK_STACK_SIZE (CONFIG_DEFAULT_TASK_STACK_SIZE)
 #define TASK_MAX_NUM (CONFIG_TASK_MAX_NUM)
 
 #if (SYSTICK_LOAD_REG_VALUE > 0xFFFFFFul)
-#error "the value "CONFIG_INTERRUPT_HZ" in file Config.h is too small."
+#error "the value "CONFIG_SYSTICK_RATE_HZ" in file Config.h is too small."
 #endif
 
-static volatile unsigned int scheduling_suspended = 0;
-volatile struct TaskStruct *current_task = NULL;
+volatile unsigned int scheduling_suspended = 0U;
+struct TaskStruct *volatile current_task = NULL;
+
+static struct TaskStruct *kernel_idle_task = NULL;
+#define KERNEL_IDLE_TASK_TYPE ((enum TaskType)(-1))
+
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+#include "Memory.h"
+#else
 static struct TaskStruct task_structures[TASK_MAX_NUM];
-static uint16_t task_structures_pos = 0;
+static size_t task_structures_pos = 0U;
+#endif
 
 static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
-static void ErrorReturnHandler(void);
 static void Task_startFirstTask(void);
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack);
 static void Task_deleteTaskStruct(struct TaskStruct *const task);
@@ -39,21 +39,53 @@ void Task_suspendScheduling() {
 }
 
 void Task_resumeScheduling() {
-    if (scheduling_suspended > 0) {
+    if (scheduling_suspended > 0U) {
         --scheduling_suspended;
     }
 }
 
-bool Task_create(void (*const fn)(void *), void *const arg,
-                 Stack_t *const stack, const Stack_t stack_size) {
-    if (fn == NULL || stack == NULL) {
+bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr) {
+    if (fn == NULL) {
         return false;
     }
 
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    if (attr == NULL) {
+        const struct TaskAttribute default_attr = {
+            .type = COMMON_TASK,
+            .sched_method = SCHED_RR,
+            .stack_size = DEFAULT_TASK_STACK_SIZE,
+        };
+        attr = &default_attr;
+    }
+#else
+    if ((attr == NULL) || (attr->stack == NULL)) {
+        return false;
+    }
+#endif
+
     Task_suspendScheduling();
 
+    Stack_t *stack = attr->stack;
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    bool is_dynamic_stack = false;
+
+    /* 未指定栈指针 */
+    if (stack == NULL) {
+        stack = Memory_alloc(attr->stack_size * sizeof(Stack_t));
+        /* 内存分配失败 */
+        if (stack == NULL) {
+            Task_resumeScheduling();
+            return false;
+        }
+
+        is_dynamic_stack = true;
+    }
+#endif
+
+    Stack_t *top_of_stack = &stack[attr->stack_size - (Stack_t)1];
+
     /* 内存对齐 */
-    Stack_t *top_of_stack = &stack[stack_size - (Stack_t)1];
     top_of_stack = (Stack_t *)(((uint32_t)top_of_stack) & (~((uint32_t)(BYTE_ALIGNMENT - 1))));
 
     struct TaskStruct* task = Task_newTaskStruct(
@@ -61,10 +93,32 @@ bool Task_create(void (*const fn)(void *), void *const arg,
         Task_initTaskStack(top_of_stack, fn, arg)
     );
     if (task == NULL) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+        if (attr->stack == NULL) {
+            Memory_free(stack);
+        }
+#endif
         return false;
     }
 
-    if (!TaskList_pushNewTask(task)) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    task->is_dynamic_stack = is_dynamic_stack;
+#endif
+    task->type = attr->type;
+
+    /* 实时任务才支持更改调度 */
+    if (task->type == REALTIME_TASK) {
+        task->sched_method = attr->sched_method;
+    }
+
+    if (task->type == KERNEL_IDLE_TASK_TYPE) {
+        kernel_idle_task = task;
+    } else if (!TaskList_addNewTask(task)) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+        if (attr->stack == NULL) {
+            Memory_free(stack);
+        }
+#endif
         Task_deleteTaskStruct(task);
         return false;
     }
@@ -78,28 +132,102 @@ bool Task_create(void (*const fn)(void *), void *const arg,
     return true;
 }
 
-void Task_delay(const Tick_t ticks) {
-    if (ticks > 0) {
+void Task_sleep(const Tick_t ticks) {
+    if (ticks > 0U) {
+        const Tick_t blocking_ticks = Tick_currentTicks() + ticks;
+
         Task_suspendScheduling();
-        TaskList_moveFrontActiveTaskToBlockedList(Tick_getCurrentTicks() + ticks);
+
+        struct TaskListNode *front_node = NULL;
+        if (current_task->type == COMMON_TASK) {
+            front_node = TaskList_pop(ACTIVE_TASK_LIST);
+        } else if (current_task->type == REALTIME_TASK) {
+            front_node = TaskList_pop(REALTIME_TASK_LIST);
+        }
+
+        if (front_node == NULL) {
+            Task_resumeScheduling();
+            return;
+        }
+
+        front_node->task->resume_time = blocking_ticks;
+
+        TaskList_insertBlockedList(front_node);
+
         Task_resumeScheduling();
         yield();
     }
 }
 
-/* 空闲任务(优先级应该最低) */
-static Stack_t kernelIdleTask_stack[64];
+void Task_deleteSelf() {
+    Task_suspendScheduling();
+
+    struct TaskListNode *front_node;
+    if (current_task->type == COMMON_TASK) {
+        front_node = TaskList_pop(ACTIVE_TASK_LIST);
+    } else if (current_task->type == REALTIME_TASK) {
+        front_node = TaskList_pop(REALTIME_TASK_LIST);
+    }
+
+    if (front_node == NULL) {
+        Task_resumeScheduling();
+        return;
+    }
+
+    TaskList_pushSpecialListByEnum(TO_DELETE_TASK_LIST, front_node);
+
+    Task_resumeScheduling();
+    yield();
+}
+
+#define KERNEL_IDLE_TASK_STACK_SIZE 64
+static Stack_t kernelIdleTask_stack[KERNEL_IDLE_TASK_STACK_SIZE];
+/* 空闲任务(最低优先级) */
 static void kernelIdleTask(void *arg) {
     (void)arg;
 
     for (;;) {
+        #ifdef Hook_IdleTask
+            Hook_IdleTask();
+        #endif
+
+        Task_suspendScheduling();
+
+        struct TaskListNode *to_delete_node = TaskList_popSpecialListByEnum(TO_DELETE_TASK_LIST);
+
+        if (to_delete_node != NULL) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+            if (to_delete_node->task->is_dynamic_stack) {
+                Memory_free(to_delete_node->task->stack);
+            }
+#endif
+            Task_deleteTaskStruct(to_delete_node->task);
+            TaskList_freeTask(to_delete_node);
+        }
+
+        Task_resumeScheduling();
+
+        if (TaskList_hasRealTimeTask() || TaskList_hasActiveTask()) {
+            yield();
+        }
     }
 }
 
 int Task_exec() {
     /* 尝试创建空闲任务 */
-    if (Task_create(kernelIdleTask, NULL, kernelIdleTask_stack, 64)) {
-        __disable_interrupt();
+    const struct TaskAttribute idle_task_attr = {
+        .stack = kernelIdleTask_stack,
+        .stack_size = KERNEL_IDLE_TASK_STACK_SIZE,
+        .type = KERNEL_IDLE_TASK_TYPE,
+    };
+    if (Task_create(kernelIdleTask, NULL, &idle_task_attr)) {
+        /* 屏蔽中断 */
+        uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
+        __asm {
+            msr basepri, new_basepri
+            dsb
+            isb
+        }
 
         /* 配置SysTick及PendSV优先级 */
         SHPR3_Reg |= SHPR3_PENDSV_Priority;
@@ -119,9 +247,20 @@ int Task_exec() {
 
 /* 创建任务对象 */
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    struct TaskStruct *new_task = Memory_alloc(sizeof(struct TaskStruct));
+    if (new_task) {
+        new_task->stack = stack;
+        new_task->top_of_stack = top_of_stack;
+        new_task->sched_method = SCHED_RR;
+        new_task->resume_time = 0U;
+    }
+#else
     const struct TaskStruct task = {
         .stack = stack,
         .top_of_stack = top_of_stack,
+        .sched_method = SCHED_RR,
+        .resume_time = 0U,
     };
 
     if (task_structures_pos >= TASK_MAX_NUM) {
@@ -139,16 +278,41 @@ static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *cons
     struct TaskStruct *const new_task = &task_structures[task_structures_pos];
     ++task_structures_pos;
     *new_task = task;
+#endif
+
     return new_task;
 }
 
 /* 删除任务对象 */
 static void Task_deleteTaskStruct(struct TaskStruct *const task) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    Memory_free(task);
+#else
     for (size_t i = 0; i < TASK_MAX_NUM; ++i) {
         if (&task_structures[i] == task) {
             task_structures[i].stack = NULL;
             break;
         }
+    }
+#endif
+}
+
+/* 从任务列表中移除当前任务节点并返回 */
+struct TaskListNode *Task_popFromTaskList() {
+    struct TaskListNode *front_node = NULL;
+    if (current_task->type == COMMON_TASK) {
+        front_node = TaskList_pop(ACTIVE_TASK_LIST);
+    } else if (current_task->type == REALTIME_TASK) {
+        front_node = TaskList_pop(REALTIME_TASK_LIST);
+    }
+    return front_node;
+}
+
+/* 当任务函数返回时会回到这个函数 */
+static void TaskReturnHandler() {
+    Task_deleteSelf();
+
+    for (;;) {
     }
 }
 
@@ -159,7 +323,7 @@ static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void 
     /* PC寄存器 */
     *(--top_of_stack) = ((Stack_t)fn) & ((Stack_t)0xFFFFFFFEul); /* 将Thumb指令地址转为函数的实际地址 */
     /* LR寄存器 */
-    *(--top_of_stack) = (Stack_t)ErrorReturnHandler;
+    *(--top_of_stack) = (Stack_t)TaskReturnHandler;
     /* r12, r3, r2, r1寄存器 */
     top_of_stack -= 4;
     /* r0寄存器 */
@@ -170,39 +334,42 @@ static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void 
     return top_of_stack;
 }
 
-/* 当任务函数返回时会回到这个函数 */
-static void ErrorReturnHandler() {
-    __disable_interrupt();
-
-    for (;;) {
+void Task_switchNextTask() {
+    /* 检查阻塞列表任务是否超时 */
+    if (TaskList_hasBlockedTask() && Tick_after(Tick_currentTicks(),
+                                                TaskList_getFrontBlockedTaskTime())) {
+        struct TaskListNode *const front_node = TaskList_popSpecialListByEnum(BLOCKED_TASK_LIST);
+        front_node->task->resume_time = 0U;
+        if (front_node->task->type == COMMON_TASK) {
+            TaskList_pushBack(ACTIVE_TASK_LIST, front_node);
+        } else if (front_node->task->type == REALTIME_TASK) {
+            TaskList_pushBack(REALTIME_TASK_LIST, front_node);
+        }
     }
-}
 
-void Task_nextTask() {
-    if (TaskList_hasBlockedTask() &&
-        Tick_after(Tick_getCurrentTicks(), TaskList_getFrontBlockedTaskTime())) {
-        TaskList_putFrontBlockedTaskToActiveListBack();
-    }
-
-    struct TaskStruct *task = TaskList_getFrontActiveTask();
+    struct TaskStruct *task = TaskList_getFrontRealTimeTask();
     if (task == current_task) {
-        TaskList_moveFrontActiveTaskToBack();
+        struct TaskListNode *const front_node = TaskList_pop(REALTIME_TASK_LIST);
+        TaskList_pushBack(REALTIME_TASK_LIST, front_node);
+        task = TaskList_getFrontRealTimeTask();
+    }
+
+    /* 选择任务 */
+    if (task == NULL) {
+        /* 从活跃列表中获取第一个任务 */
         task = TaskList_getFrontActiveTask();
+        if (task == current_task) {
+            struct TaskListNode *const front_node = TaskList_pop(ACTIVE_TASK_LIST);
+            TaskList_pushBack(ACTIVE_TASK_LIST, front_node);
+            task = TaskList_getFrontActiveTask();
+        }
+
+        if (task == NULL) {
+            task = kernel_idle_task;
+        }
     }
 
-    if (task != NULL) {
-        current_task = task;
-    }
-}
-
-void Systick_Handler_Port() {
-    disable_interrupt_reentrant();
-    kernel_Tick_inc();
-
-    if (scheduling_suspended == 0U) {
-        Interrupt_CTRL_Reg = PendSV_SET_Bit;
-    }
-    enable_interrupt_reentrant();
+    current_task = task;
 }
 
 __asm static void Task_startFirstTask() {
@@ -226,91 +393,5 @@ __asm static void Task_startFirstTask() {
     /* 调用SVC处理函数 */
     svc 0
     nop
-    nop
-}
-
-__asm void SVC_Handler_Port() {
-    /* 8 字节对齐 */
-    PRESERVE8
-
-    /* 获取current_task的第一位成员 */
-    ldr r3, =current_task
-    ldr r1, [r3]
-    ldr r0, [r1]
-
-    /* 加载current_task栈顶指针中对应的寄存器 */
-    ldmia r0!, {r4-r11}
-
-    /* 设置进程堆栈指针为第一个任务的栈顶指针 */
-    msr psp, r0
-    isb
-
-    /* 恢复中断 */
-    mov r0, #0
-    msr basepri, r0
-
-    /* 使用PSP作为堆栈指针，并切换为用户级 */
-    orr r14, #0xD
-
-    /* 从PSP中恢复寄存器 */
-    bx r14
-}
-
-__asm void PendSV_Handler_Port() {
-    extern current_task;
-    extern Task_nextTask;
-
-    /* 8 字节对齐 */
-    PRESERVE8
-
-    /* 获取进程堆栈指针 */
-    mrs r0, psp
-    /* 确保PSP为最新 */
-    isb
-
-    /* 获取最近任务指向的结构体 */
-    ldr	r3, =current_task
-    ldr	r1, [r3]
-
-    /* 除PendSV自动保存的寄存器外，将R4~R11保存到当前任务的任务栈中 */
-    stmdb r0!, {r4-r11}
-
-    /* 将进程堆栈指针保存到最近任务的堆栈指针 */
-    str r0, [r1]
-
-    /* 将r3和r14保存到内核堆栈MSP中 */
-    stmdb sp!, {r3, r14}
-
-    /* 屏蔽低优先级中断 */
-    mov r0, #MAX_SYSCALL_INTERRUPT_PRIORITY
-    msr basepri, r0
-    dsb
-    isb
-
-    /* 跳转到任务切换函数 */
-    bl Task_nextTask
-
-    /* 恢复中断 */
-    mov r0, #0
-    msr basepri, r0
-
-    /* 从MSP中加载r3, r14寄存器 */
-    /* 因为之前跳转过函数，寄存器的值会重置 */
-    ldmia sp!, {r3, r14}
-
-    /* 重新从最近任务中读取栈顶指针 */
-    /* 此时为新的栈顶指针 */
-    ldr r1, [r3]
-    ldr r0, [r1]
-
-    /* 从任务栈中加载对应寄存器 */
-    ldmia r0!, {r4-r11}
-
-    /* 将栈顶指针更新到PSP寄存器 */
-    msr psp, r0
-    isb
-
-    /* 从PSP指向的堆栈加载寄存器，并跳转执行 */
-    bx r14
     nop
 }

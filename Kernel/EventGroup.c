@@ -1,15 +1,16 @@
 #include "EventGroup.h"
 #include "Task.h"
-#include "TaskList.h"
-#include <stddef.h>
+
+#define EventGroup_isTriggered(event_group) (event_group->events == 0U)
 
 /* 创建一个事件组 */
 void EventGroup_new(struct EventGroup *const event_group,
                     const enum EventType events, const enum EventTrigLogic tri_logic) {
     event_group->events = events;
-    event_group->current_events = events;
+    event_group->reset_events = events;
     event_group->tri_logic = tri_logic;
-    event_group->is_triggered = false;
+    event_group->tasks_waiting_triggered = NULL;
+    event_group->tasks_count = 0U;
 }
 
 /* 监听事件 */
@@ -17,25 +18,37 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
     if (event_group == NULL) {
         return false;
     }
-    while (!event_group->is_triggered) {
-        Task_suspendScheduling();
-        struct TaskStruct *const task = TaskList_moveFrontActiveTaskToEventList();
-        Task_resumeScheduling();
 
-        if (task == NULL) {
+    Task_suspendScheduling();
+    ++(event_group->tasks_count);
+    Task_resumeScheduling();
+
+    while (!EventGroup_isTriggered(event_group)) {
+        Task_suspendScheduling();
+
+        extern struct TaskListNode *Task_popFromTaskList();
+        struct TaskListNode *const front_node = Task_popFromTaskList();
+
+        if (front_node == NULL) {
+            Task_resumeScheduling();
             return false;
         }
 
-        Task_suspendScheduling();
-        task->suspension_reason.event_group = event_group;
-        task->suspension_reason.event_group->current_events = task->suspension_reason.event_group->events;
+        TaskList_pushSpecialList(&(event_group->tasks_waiting_triggered), front_node);
+
         Task_resumeScheduling();
 
         yield();
     }
 
     Task_suspendScheduling();
-    event_group->is_triggered = false;
+
+    --(event_group->tasks_count);
+
+    if (event_group->tasks_count == 0U) {
+        event_group->events = event_group->reset_events;
+    }
+
     Task_resumeScheduling();
 
     return true;
@@ -46,24 +59,32 @@ void EventGroup_trigger(struct EventGroup *const event_group, const enum EventTy
     if (event_group == NULL) {
         return;
     }
-    Task_suspendScheduling();
-    for (struct TaskListNode *prev_node = NULL, *node = TaskList_getFrontEventTaskNode();
-         node != NULL; prev_node = node, node = node->next) {
-        if ((node->task->suspension_reason.event_group == event_group) &&
-            (node->task->suspension_reason.event_group->current_events & events)) {
-            node->task->suspension_reason.event_group->current_events &= ~events;
 
-            if ((node->task->suspension_reason.event_group->tri_logic == EVENT_TRIG_ANY) ||
-                (node->task->suspension_reason.event_group->current_events == 0U)) {
-                node->task->suspension_reason.event_group = NULL;
-                TaskList_putEventTaskToActiveListBack(prev_node,
-                                                      node);
+    if ((event_group->events & events) == 0U) {
+        return;
+    }
+
+    Task_suspendScheduling();
+
+    event_group->events &= ~events;
+
+    if ((event_group->tri_logic == EVENT_TRIG_ANY) ||
+        (event_group->events == (enum EventType)0U)) {
+        event_group->events = (enum EventType)0U;
+        while (true) {
+            struct TaskListNode *const node = TaskList_popSpecialList(&(event_group->tasks_waiting_triggered));
+
+            if (node == NULL) {
+                break;
+            }
+
+            if (node->task->type == COMMON_TASK) {
+                TaskList_pushBack(ACTIVE_TASK_LIST, node);
+            } else if (node->task->type == REALTIME_TASK) {
+                TaskList_pushBack(REALTIME_TASK_LIST, node);
             }
         }
     }
-    Task_resumeScheduling();
 
-    Task_suspendScheduling();
-    event_group->is_triggered = true;
     Task_resumeScheduling();
 }

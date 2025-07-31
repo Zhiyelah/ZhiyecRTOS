@@ -15,33 +15,41 @@ struct TaskListNode {
     struct TaskListNode *next;
 };
 
-/* 任务获取 */
+enum TaskListType {
+    ACTIVE_TASK_LIST = 0U,
+    REALTIME_TASK_LIST
+};
 
-bool TaskList_pushNewTask(struct TaskStruct *const task);
+enum FunctionalListType {
+    BLOCKED_TASK_LIST = 0U,
+    TO_DELETE_TASK_LIST
+};
+
+/* 任务列表接口 */
+
+void TaskList_pushBack(const enum TaskListType type, struct TaskListNode *const node);
+struct TaskListNode *TaskList_pop(const enum TaskListType type);
+void TaskList_pushSpecialList(struct TaskListNode **const list_head, struct TaskListNode *const node);
+void TaskList_pushSpecialListByEnum(const enum FunctionalListType type, struct TaskListNode *const node);
+struct TaskListNode *TaskList_popSpecialList(struct TaskListNode **const list_head);
+struct TaskListNode *TaskList_popSpecialListByEnum(const enum FunctionalListType type);
+bool TaskList_addNewTask(struct TaskStruct *const task);
+void TaskList_freeTask(struct TaskListNode *const node);
+
+/* 实时任务接口 */
+
+bool TaskList_hasRealTimeTask(void);
+struct TaskStruct *TaskList_getFrontRealTimeTask(void);
+
+/* 活跃任务接口 */
+
+bool TaskList_hasActiveTask(void);
 struct TaskStruct *TaskList_getFrontActiveTask(void);
-void TaskList_moveFrontActiveTaskToBack(void);
 
 /* 阻塞支持 */
 
 bool TaskList_hasBlockedTask(void);
-void TaskList_moveFrontActiveTaskToBlockedList(const Tick_t blocking_ticks);
+void TaskList_insertBlockedList(struct TaskListNode *const front_node);
 Tick_t TaskList_getFrontBlockedTaskTime(void);
-void TaskList_putFrontBlockedTaskToActiveListBack(void);
-
-/* 事件支持 */
-
-bool TaskList_hasEventTask(void);
-struct TaskListNode *TaskList_getFrontEventTaskNode(void);
-struct TaskStruct *TaskList_moveFrontActiveTaskToEventList(void);
-void TaskList_putEventTaskToActiveListBack(struct TaskListNode *const prev_node,
-                                           struct TaskListNode *const node);
-
-/* 消息支持 */
-
-bool TaskList_hasMessageTask(void);
-struct TaskListNode *TaskList_getFrontMessageTaskNode(void);
-struct TaskStruct *TaskList_moveFrontActiveTaskToMessageList(void);
-void TaskList_putMessageTaskToActiveListBack(struct TaskListNode *const prev_node,
-                                             struct TaskListNode *const node);
 
 #endif /* _TaskList_h */

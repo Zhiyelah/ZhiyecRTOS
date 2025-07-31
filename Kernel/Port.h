@@ -7,7 +7,11 @@
 #ifndef _Port_h
 #define _Port_h
 
+#include <stdbool.h>
 #include <stdint.h>
+
+/* 内存字节对齐位 */
+#define BYTE_ALIGNMENT 8
 
 /* ARM-CM0 to ARM-CM7 */
 /* SysTick寄存器 */
@@ -23,16 +27,22 @@
 /* 优先级寄存器 */
 #define SHPR3_Reg (*((volatile uint32_t *)0xe000ed20))
 /* 最小优先级 */
-#define Min_Interrupt_Priority (0xFFul)
+#define MIN_Interrupt_Priority (0xFFul)
 
 /* SysTick和PendSV的优先级 */
-#define SHPR3_PENDSV_Priority (((uint32_t)Min_Interrupt_Priority) << 16UL)
-#define SHPR3_SYSTICK_Priority (((uint32_t)(CONFIG_MAX_SYSCALL_INTERRUPT_PRIORITY - 1)) << 24UL)
+#define SHPR3_PENDSV_Priority (((uint32_t)MIN_Interrupt_Priority) << 16UL)
+#define SHPR3_SYSTICK_Priority (((uint32_t)CONFIG_KERNEL_INTERRUPT_PRIORITY) << 24UL)
 
 /* 中断控制与状态寄存器 */
 #define Interrupt_CTRL_Reg (*((volatile uint32_t *)0xe000ed04))
 
 /* PendSV中断位 */
 #define PendSV_SET_Bit (1UL << 28UL)
+
+/**
+ * @brief 判断当前堆栈指针是否为PSP
+ * @return 如果当前堆栈指针为PSP则返回true, 否则返回false
+ */
+bool Port_isUsingPSP(void);
 
 #endif /* _Port_h */

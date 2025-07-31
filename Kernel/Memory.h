@@ -1,0 +1,24 @@
+/**
+ * @file Memory.h
+ * @author Zhiyelah
+ * @brief 动态内存分配(在配置文件启用该功能后添加)
+ */
+
+#ifndef _Memory_h
+#define _Memory_h
+
+#include <stddef.h>
+
+/**
+ * @brief 分配内存
+ * @param size 分配的内存大小
+ */
+void *Memory_alloc(size_t size);
+
+/**
+ * @brief 释放内存
+ * @param ptr 通过Memory_alloc分配的内存指针
+ */
+void Memory_free(void *const ptr);
+
+#endif /* _Memory_h */

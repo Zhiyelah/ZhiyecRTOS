@@ -16,7 +16,7 @@ typedef int32_t STick_t;
 /**
  * @brief 获取当前ticks
  */
-Tick_t Tick_getCurrentTicks(void);
+Tick_t Tick_currentTicks(void);
 
 /**
  * @brief 毫秒转ticks

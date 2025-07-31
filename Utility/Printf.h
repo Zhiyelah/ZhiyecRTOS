@@ -4,7 +4,7 @@
 /**
  * @brief 设置Printf打印输出函数
  */
-void Printf_setOutputFunc(void (*output)(char));
+void Printf_setOutput(void (*output)(char));
 
 /**
  * @brief 线程安全的Printf

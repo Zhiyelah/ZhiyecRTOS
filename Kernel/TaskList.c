@@ -4,30 +4,40 @@
 
 #define TASK_MAX_NUM (CONFIG_TASK_MAX_NUM)
 
-/* 活跃任务列表 */
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+#include "Memory.h"
+#else
+/* 任务列表 */
 static struct TaskListNode task_list[TASK_MAX_NUM];
-#define task_list_head ((struct TaskListNode *)task_list)
-static struct TaskListNode *task_list_tail = task_list_head;
-
-/**
- * @return 列表是否为空
- */
-#define TaskList_isEmpty() (task_list_head == task_list_tail)
-
-/* 阻塞任务列表 */
-static struct TaskListNode *blocked_task_list_head = NULL;
-
-/* 等待事件任务列表 */
-static struct TaskListNode *event_task_list_head = NULL;
-
-/* 等待消息任务列表 */
-static struct TaskListNode *message_task_list_head = NULL;
-
 /* 空闲节点链表 */
 static struct TaskListNode *task_list_free_head = NULL;
-
 /* 列表已初始化 */
 static bool task_list_is_initialized = false;
+#endif
+
+/* 活跃任务列表 */
+static struct TaskListNode active_task_list;
+#define active_task_list_head ((struct TaskListNode *)&active_task_list)
+static struct TaskListNode *active_task_list_tail = active_task_list_head;
+
+/* 实时任务列表 */
+static struct TaskListNode realtime_task_list;
+#define realtime_task_list_head ((struct TaskListNode *)&realtime_task_list)
+static struct TaskListNode *realtime_task_list_tail = realtime_task_list_head;
+
+/**
+ * @return 任务列表是否为空
+ */
+#define TaskList_isActiveListEmpty() (active_task_list_head == active_task_list_tail)
+#define TaskList_isRealTimeListEmpty() (realtime_task_list_head == realtime_task_list_tail)
+
+/**
+ * 内置特殊列表
+ */
+/* 阻塞任务列表 */
+static struct TaskListNode *blocked_task_list_head = NULL;
+/* 等待删除任务列表 */
+static struct TaskListNode *to_delete_task_list_head = NULL;
 
 /**
  * head节点不存储数据
@@ -35,6 +45,7 @@ static bool task_list_is_initialized = false;
  */
 
 /* 初始化列表 */
+#if (!USE_DYNAMIC_MEMORY_ALLOCATION)
 static __forceinline void TaskList_init() {
     /* 初始化空闲链表 */
     for (size_t i = 0; i < TASK_MAX_NUM - 1; ++i) {
@@ -42,97 +53,195 @@ static __forceinline void TaskList_init() {
     }
     task_list[TASK_MAX_NUM - 1].next = NULL;
 
-    task_list_free_head = task_list_head->next;
+    task_list_free_head = task_list;
 }
+#endif
 
 /* 将节点添加到活跃列表尾部 */
-static void TaskList_push(struct TaskListNode *const node) {
+void TaskList_pushBack(const enum TaskListType type, struct TaskListNode *const node) {
+    struct TaskListNode **list_tail = NULL;
+    if (type == ACTIVE_TASK_LIST) {
+        list_tail = &active_task_list_tail;
+    } else if (type == REALTIME_TASK_LIST) {
+        list_tail = &realtime_task_list_tail;
+    } else {
+        return;
+    }
+
     node->next = NULL;
-    task_list_tail->next = node;
-    task_list_tail = task_list_tail->next;
+    (*list_tail)->next = node;
+    *list_tail = (*list_tail)->next;
 }
 
 /* 将活跃列表的头节点移除并返回它 */
-static struct TaskListNode *TaskList_pop() {
-    if (TaskList_isEmpty()) {
+struct TaskListNode *TaskList_pop(const enum TaskListType type) {
+    struct TaskListNode *list_head = NULL;
+    struct TaskListNode **list_tail = NULL;
+    if (type == ACTIVE_TASK_LIST) {
+        list_head = active_task_list_head;
+        list_tail = &active_task_list_tail;
+    } else if (type == REALTIME_TASK_LIST) {
+        list_head = realtime_task_list_head;
+        list_tail = &realtime_task_list_tail;
+    } else {
         return NULL;
     }
 
-    struct TaskListNode *const front_node = task_list_head->next;
+    if (list_head == *list_tail) {
+        return NULL;
+    }
+
+    struct TaskListNode *const front_node = list_head->next;
 
     /* 从活跃列表中移除 */
-    task_list_head->next = front_node->next;
+    list_head->next = front_node->next;
     /* 回退尾指针 */
-    if (front_node == task_list_tail) {
-        task_list_tail = task_list_head;
+    if (front_node == *list_tail) {
+        *list_tail = list_head;
     }
 
     front_node->next = NULL;
-    /* 更新时间 */
-    front_node->task->time = Tick_getCurrentTicks();
 
     return front_node;
 }
 
-/* 添加新任务到活跃列表尾部 */
-bool TaskList_pushNewTask(struct TaskStruct *const task) {
+/* 将节点添加到特殊列表头部 */
+void TaskList_pushSpecialList(struct TaskListNode **const list_head, struct TaskListNode *const node) {
+    node->next = *list_head;
+    *list_head = node;
+}
+
+/* 通过枚举量将节点添加到特殊列表头部 */
+void TaskList_pushSpecialListByEnum(const enum FunctionalListType type, struct TaskListNode *const node) {
+    struct TaskListNode **list_head = NULL;
+    if (type == BLOCKED_TASK_LIST) {
+        list_head = &blocked_task_list_head;
+    } else if (type == TO_DELETE_TASK_LIST) {
+        list_head = &to_delete_task_list_head;
+    } else {
+        return;
+    }
+
+    TaskList_pushSpecialList(list_head, node);
+}
+
+/* 将特殊列表的头节点移除并返回 */
+struct TaskListNode *TaskList_popSpecialList(struct TaskListNode **const list_head) {
+    if ((list_head == NULL) || (*list_head == NULL)) {
+        return NULL;
+    }
+
+    struct TaskListNode *const node = *list_head;
+    *list_head = (*list_head)->next;
+    node->next = NULL;
+    return node;
+}
+
+/* 通过枚举量将特殊列表的节点移除 */
+struct TaskListNode *TaskList_popSpecialListByEnum(const enum FunctionalListType type) {
+    struct TaskListNode **list_head = NULL;
+    if (type == BLOCKED_TASK_LIST) {
+        list_head = &blocked_task_list_head;
+    } else if (type == TO_DELETE_TASK_LIST) {
+        list_head = &to_delete_task_list_head;
+    }
+
+    return TaskList_popSpecialList(list_head);
+}
+
+/* 添加新任务到对应列表尾部 */
+bool TaskList_addNewTask(struct TaskStruct *const task) {
+#if (!USE_DYNAMIC_MEMORY_ALLOCATION)
     if (!task_list_is_initialized) {
         task_list_is_initialized = true;
         TaskList_init();
     }
+#endif
 
+    struct TaskListNode *new_node;
+
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    new_node = Memory_alloc(sizeof(struct TaskListNode));
+    if (new_node == NULL) {
+        return false;
+    }
+#else
     if (task_list_free_head == NULL) {
         return false; /* 没有可用节点 */
     }
 
-    struct TaskListNode *const new_node = task_list_free_head;
+    new_node = task_list_free_head;
 
     /* 从空闲链表移除 */
     task_list_free_head = task_list_free_head->next;
+#endif
 
     new_node->task = task;
-    new_node->task->time = Tick_getCurrentTicks();
-    TaskList_push(new_node);
+
+    if (task->type == COMMON_TASK) {
+        TaskList_pushBack(ACTIVE_TASK_LIST, new_node);
+    } else if (task->type == REALTIME_TASK) {
+        TaskList_pushBack(REALTIME_TASK_LIST, new_node);
+    } else {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+        Memory_free(new_node);
+#else
+        /* 将节点放回空闲节点列表 */
+        new_node->next = task_list_free_head;
+        task_list_free_head = new_node;
+#endif
+        return false;
+    }
 
     return true;
 }
 
-/* 获取第一个活跃任务 */
-struct TaskStruct *TaskList_getFrontActiveTask() {
-    return task_list_head->next->task;
+/* 从任务列表中释放任务节点 */
+void TaskList_freeTask(struct TaskListNode *const node) {
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    Memory_free(node);
+#else
+    /* 添加到空闲节点链表 */
+    node->next = task_list_free_head;
+    task_list_free_head = node;
+#endif
 }
 
-/* 将第一个活跃任务节点放到链表尾部 */
-void TaskList_moveFrontActiveTaskToBack() {
-    struct TaskListNode *const front_node = TaskList_pop();
+/* 有实时任务 */
+bool TaskList_hasRealTimeTask() {
+    return !TaskList_isRealTimeListEmpty();
+}
 
-    if (front_node == NULL) {
-        return;
+/* 获取第一个实时任务 */
+struct TaskStruct *TaskList_getFrontRealTimeTask() {
+    if (TaskList_isRealTimeListEmpty()) {
+        return NULL;
     }
 
-    TaskList_push(front_node);
+    return realtime_task_list_head->next->task;
+}
+
+/* 有活跃任务 */
+bool TaskList_hasActiveTask() {
+    return !TaskList_isActiveListEmpty();
+}
+
+/* 获取第一个活跃任务 */
+struct TaskStruct *TaskList_getFrontActiveTask() {
+    if (TaskList_isActiveListEmpty()) {
+        return NULL;
+    }
+
+    return active_task_list_head->next->task;
 }
 
 /* 有阻塞任务 */
 bool TaskList_hasBlockedTask() {
-    if (TaskList_isEmpty()) {
-        return false;
-    }
-
     return blocked_task_list_head != NULL;
 }
 
-/* 将第一个活跃任务移动到阻塞列表 */
-void TaskList_moveFrontActiveTaskToBlockedList(const Tick_t blocking_ticks) {
-    struct TaskListNode *const front_node = TaskList_pop();
-
-    if (front_node == NULL) {
-        return;
-    }
-
-    /* 更新阻塞时间 */
-    front_node->task->time = blocking_ticks;
-
+/* 将任务插入阻塞列表 */
+void TaskList_insertBlockedList(struct TaskListNode *const front_node) {
     if (blocked_task_list_head == NULL) {
         blocked_task_list_head = front_node;
     } else {
@@ -140,7 +249,7 @@ void TaskList_moveFrontActiveTaskToBlockedList(const Tick_t blocking_ticks) {
         struct TaskListNode *current_node = blocked_task_list_head;
         struct TaskListNode *prev_node = NULL;
         while (current_node != NULL) {
-            if (Tick_after(current_node->task->time, front_node->task->time)) {
+            if (Tick_after(current_node->task->resume_time, front_node->task->resume_time)) {
                 front_node->next = current_node;
                 if (prev_node != NULL) {
                     prev_node->next = front_node;
@@ -154,108 +263,12 @@ void TaskList_moveFrontActiveTaskToBlockedList(const Tick_t blocking_ticks) {
             current_node = current_node->next;
         }
 
-        /* 比阻塞列表所有元素时间都大, 添加到阻塞列表尾 */
+        /* 比阻塞列表所有元素时间都大, 添加到阻塞列表末尾 */
         prev_node->next = front_node;
     }
 }
 
 /* 获取第一个阻塞任务的时间 */
 Tick_t TaskList_getFrontBlockedTaskTime() {
-    return blocked_task_list_head->task->time;
-}
-
-/* 将第一个阻塞任务节点放回到活跃列表尾部 */
-void TaskList_putFrontBlockedTaskToActiveListBack() {
-    struct TaskListNode *const front_node = blocked_task_list_head;
-    blocked_task_list_head = blocked_task_list_head->next;
-
-    TaskList_push(front_node);
-}
-
-/* 有事件任务 */
-bool TaskList_hasEventTask() {
-    if (TaskList_isEmpty()) {
-        return false;
-    }
-
-    return event_task_list_head != NULL;
-}
-
-/* 获取第一个事件任务节点 */
-struct TaskListNode *TaskList_getFrontEventTaskNode() {
-    return event_task_list_head;
-}
-
-/* 将第一个活跃任务移动到事件列表 */
-struct TaskStruct *TaskList_moveFrontActiveTaskToEventList() {
-    struct TaskListNode *const front_node = TaskList_pop();
-
-    if (front_node == NULL) {
-        return NULL;
-    }
-
-    if (event_task_list_head == NULL) {
-        event_task_list_head = front_node;
-    } else {
-        front_node->next = event_task_list_head;
-        event_task_list_head = front_node;
-    }
-
-    return front_node->task;
-}
-
-/* 将事件任务节点放回到活跃列表尾部 */
-void TaskList_putEventTaskToActiveListBack(struct TaskListNode *const prev_node,
-                                           struct TaskListNode *const node) {
-    if (node == event_task_list_head) {
-        event_task_list_head = event_task_list_head->next;
-    } else {
-        prev_node->next = node->next;
-    }
-
-    TaskList_push(node);
-}
-
-/* 有消息任务 */
-bool TaskList_hasMessageTask(void) {
-    if (TaskList_isEmpty()) {
-        return false;
-    }
-
-    return message_task_list_head != NULL;
-}
-
-/* 获取第一个消息任务节点 */
-struct TaskListNode *TaskList_getFrontMessageTaskNode() {
-    return message_task_list_head;
-}
-
-/* 将第一个活跃任务移动到消息列表 */
-struct TaskStruct *TaskList_moveFrontActiveTaskToMessageList() {
-    struct TaskListNode *const front_node = TaskList_pop();
-
-    if (front_node == NULL) {
-        return NULL;
-    }
-
-    if (message_task_list_head == NULL) {
-        message_task_list_head = front_node;
-    } else {
-        front_node->next = message_task_list_head;
-        message_task_list_head = front_node;
-    }
-
-    return front_node->task;
-}
-
-/* 将消息任务节点放回到活跃列表尾部并返回前一个节点 */
-void TaskList_putMessageTaskToActiveListBack(struct TaskListNode *const prev_node,
-                                             struct TaskListNode *const node) {
-    if (node == message_task_list_head) {
-        message_task_list_head = message_task_list_head->next;
-    } else {
-        prev_node->next = node->next;
-    }
-
-    TaskList_push(node);
+    return blocked_task_list_head->task->resume_time;
 }

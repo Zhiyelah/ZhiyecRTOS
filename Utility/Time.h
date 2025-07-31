@@ -7,6 +7,10 @@
 #ifndef _Time_h
 #define _Time_h
 
-void Time_delayUs(const unsigned int us);
+#include "Tick.h"
+
+typedef Tick_t Time_t;
+
+void Time_delayUs(const Time_t us);
 
 #endif /* _Time_h */

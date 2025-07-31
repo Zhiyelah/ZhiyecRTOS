@@ -5,7 +5,7 @@
 
 #define CPU_CLOCK_HZ (CONFIG_CPU_CLOCK_HZ)
 
-void Time_delayUs(const unsigned int us) {
+void Time_delayUs(const Time_t us) {
     /* 使用SysTick实现微秒级延时 */
     const uint32_t ticks = us * (CPU_CLOCK_HZ / 1000000); // 计算需要的时钟周期数
     const uint32_t start = SysTick_VALUE_Reg;             // 当前计数值
