@@ -64,8 +64,6 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
     }
 #endif
 
-    Task_suspendScheduling();
-
     Stack_t *stack = attr->stack;
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     bool is_dynamic_stack = false;
@@ -75,7 +73,6 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         stack = Memory_alloc(attr->stack_size * sizeof(Stack_t));
         /* 内存分配失败 */
         if (stack == NULL) {
-            Task_resumeScheduling();
             return false;
         }
 
@@ -83,18 +80,23 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
     }
 #endif
 
-    Stack_t *top_of_stack = &stack[attr->stack_size - (Stack_t)1];
+    Stack_t *top_of_stack = &stack[attr->stack_size - (Stack_t)1U];
 
     /* 内存对齐 */
-    top_of_stack = (Stack_t *)(((uint32_t)top_of_stack) & (~((uint32_t)(BYTE_ALIGNMENT - 1))));
+    top_of_stack = (Stack_t *)(((Stack_t)top_of_stack) & ~((Stack_t)(BYTE_ALIGNMENT - 1)));
+
+    Task_suspendScheduling();
 
     struct TaskStruct* task = Task_newTaskStruct(
         stack,
         Task_initTaskStack(top_of_stack, fn, arg)
     );
+
+    Task_resumeScheduling();
+
     if (task == NULL) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
-        if (attr->stack == NULL) {
+        if (is_dynamic_stack) {
             Memory_free(stack);
         }
 #endif
@@ -111,6 +113,8 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         task->sched_method = attr->sched_method;
     }
 
+    Task_suspendScheduling();
+
     if (task->type == KERNEL_IDLE_TASK_TYPE) {
         kernel_idle_task = task;
     } else if (!TaskList_addNewTask(task)) {
@@ -120,6 +124,8 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         }
 #endif
         Task_deleteTaskStruct(task);
+
+        Task_resumeScheduling();
         return false;
     }
 
@@ -188,7 +194,7 @@ static void kernelIdleTask(void *arg) {
 
     for (;;) {
         #ifdef Hook_IdleTask
-            Hook_IdleTask();
+            Hook_runIdleTask();
         #endif
 
         Task_suspendScheduling();
@@ -196,6 +202,10 @@ static void kernelIdleTask(void *arg) {
         struct TaskListNode *to_delete_node = TaskList_popSpecialListByEnum(TO_DELETE_TASK_LIST);
 
         if (to_delete_node != NULL) {
+            #ifdef Hook_deleteTask
+                Hook_deleteTask(to_delete_node->task);
+            #endif
+
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
             if (to_delete_node->task->is_dynamic_stack) {
                 Memory_free(to_delete_node->task->stack);
@@ -249,7 +259,7 @@ int Task_exec() {
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     struct TaskStruct *new_task = Memory_alloc(sizeof(struct TaskStruct));
-    if (new_task) {
+    if (new_task != NULL) {
         new_task->stack = stack;
         new_task->top_of_stack = top_of_stack;
         new_task->sched_method = SCHED_RR;

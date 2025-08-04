@@ -22,7 +22,7 @@ void SysTick_Handler_Port() {
     /* 默认以特权模式执行 */
 
 #ifdef Hook_SysTick
-    Hook_SysTick();
+    Hook_enterSysTickISR();
 #endif
 
     /* 屏蔽中断 */

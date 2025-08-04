@@ -7,10 +7,15 @@
 #ifndef _Hook_h
 #define _Hook_h
 
-/* 注册SysTick中断钩子 */
-#define Hook_SysTick()
+/* 注册钩子 */
 
-/* 注册空闲任务钩子 */
-#define Hook_IdleTask()
+/* SysTick中断钩子 */
+#define Hook_enterSysTickISR() ((void)0)
+
+/* 空闲任务钩子 */
+#define Hook_runIdleTask() ((void)0)
+
+/* 任务删除钩子 */
+#define Hook_deleteTask(task) ((void)0)
 
 #endif /* _Hook_h */
