@@ -7,9 +7,9 @@
 #ifndef _Task_h
 #define _Task_h
 
+#include "Config.h"
 #include "Port.h"
 #include "Tick.h"
-#include "Config.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -52,12 +52,18 @@ struct TaskAttribute {
     const Stack_t stack_size;
 };
 
-#define TaskAttribute_def(_name, _stack, _type)     \
-    struct TaskAttribute _name = {                  \
-        .stack = _stack,                            \
-        .stack_size = sizeof(_stack),               \
-        .type = _type,                              \
-    };
+/**
+ * @brief 任务属性结构体定义
+ * @param _name 结构体变量名
+ * @param _stack 任务栈指针
+ * @param _type 任务类型
+ */
+#define TaskAttribute_def(_name, _stack, _type) \
+    struct TaskAttribute _name = {              \
+        .stack = _stack,                        \
+        .stack_size = sizeof(_stack),           \
+        .type = _type,                          \
+    }
 
 struct TaskStruct {
     /* 栈顶指针(必须是结构体的第一个成员) */
@@ -102,12 +108,13 @@ void Task_deleteSelf(void);
 
 /**
  * @brief 让出CPU
-*/
-#define yield() {                           \
-    Interrupt_CTRL_Reg = PendSV_SET_Bit;    \
-    __dsb(0xFu);                            \
-    __isb(0xFu);                            \
-}
+ */
+#define yield()                              \
+    {                                        \
+        Interrupt_CTRL_Reg = PendSV_SET_Bit; \
+        __dsb(0xFu);                         \
+        __isb(0xFu);                         \
+    }
 
 /**
  * @brief 判断当前环境是否在任务里
