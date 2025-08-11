@@ -1,21 +1,61 @@
-#include "Port.h"
-#include "Config.h"
-#include "Tick.h"
 #include "Task.h"
 #include "Hook.h"
 
 #define SysTick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
 #define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
-#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
 
 __asm bool Port_isUsingPSP() {
+    /* 判断当前sp指针是msp还是psp */
     mov r0, sp
     mrs r1, msp
     cmp r0, r1
     moveq r0, #0
     movne r0, #1
     bx lr
+}
+
+/* 初始化任务栈接口 */
+Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
+    /* xPSR寄存器 */
+    *(--top_of_stack) = 0x01000000; /* 以Thumb指令模式执行(内存受限场景, Cortex-M平台要求) */
+    /* PC寄存器 */
+    *(--top_of_stack) = ((Stack_t)fn) & ((Stack_t)0xFFFFFFFEul); /* 将Thumb指令地址转为函数的实际地址 */
+    /* LR寄存器 */
+    extern void TaskReturnHandler();
+    *(--top_of_stack) = (Stack_t)TaskReturnHandler;
+    /* r12, r3, r2, r1寄存器 */
+    top_of_stack -= 4;
+    /* r0寄存器 */
+    *(--top_of_stack) = (Stack_t)arg;
+    /* r11, r10, r9, r8, r7, r6, r5, r4寄存器 */
+    top_of_stack -= 8;
+
+    return top_of_stack;
+}
+
+__asm void StartFirstTask_Port() {
+    /* 8 字节对齐 */
+    PRESERVE8
+
+    /* 从VTOR寄存器获取初始堆栈指针 */
+    ldr r0, =0xE000ED08
+    ldr r0, [r0]
+    ldr r0, [r0]
+
+    /* 将MSP设置为初始值 */
+    msr msp, r0
+
+    /* 启用全局中断 */
+    cpsie i
+    cpsie f
+    dsb
+    isb
+
+    /* 调用SVC处理函数 */
+    svc 0
+    nop
+    nop
 }
 
 void SysTick_Handler_Port() {
@@ -25,26 +65,16 @@ void SysTick_Handler_Port() {
     Hook_enterSysTickISR();
 #endif
 
-    /* 屏蔽中断 */
-    uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
-    __asm {
-        msr basepri, new_basepri
-        dsb
-        isb
-    }
+    Port_disableInterrupt();
 
     kernel_Tick_inc();
 
-    extern volatile const unsigned int scheduling_suspended;
-    extern volatile const struct TaskStruct *const current_task;
-    if (scheduling_suspended == 0U && current_task->sched_method == SCHED_RR) {
+    extern bool Task_needsSwitch();
+    if (Task_needsSwitch()) {
         Interrupt_CTRL_Reg = PendSV_SET_Bit;
     }
 
-    /* 恢复中断 */
-    __asm {
-        msr basepri, #0
-    }
+    Port_enableInterrupt();
 }
 
 __asm void SVC_Handler_Port() {
@@ -53,12 +83,12 @@ __asm void SVC_Handler_Port() {
     /* 8 字节对齐 */
     PRESERVE8
 
-    /* 获取current_task的第一位成员 */
+    /* 获取最近任务的栈顶指针 */
     ldr r0, =current_task
     ldr r0, [r0]
     ldr r0, [r0]
 
-    /* 加载current_task栈顶指针中对应的寄存器 */
+    /* 加载栈顶指针中对应的寄存器 */
     ldmia r0!, {r4-r11}
 
     /* 设置进程堆栈指针为第一个任务的栈顶指针 */
@@ -94,14 +124,14 @@ __asm void PendSV_Handler_Port() {
     extern current_task;
 
     /* 获取最近任务指向的结构体 */
-    ldr	r2, =current_task
-    ldr	r1, [r2]
+    ldr	r3, =current_task
+    ldr	r1, [r3]
 
     /* 将进程堆栈指针保存到最近任务的堆栈指针 */
     str r0, [r1]
 
-    /* 将current_task的地址和lr保存到内核堆栈MSP中 */
-    stmdb sp!, {r2, lr}
+    /* 将最近任务的地址和lr保存到内核堆栈MSP中 */
+    stmdb sp!, {r3, lr}
 
     /* 屏蔽受管理的中断 */
     mov r0, #MANAGED_INTERRUPT_MAX_PRIORITY
@@ -118,13 +148,13 @@ __asm void PendSV_Handler_Port() {
     mov r0, #0
     msr basepri, r0
 
-    /* 从MSP中加载current_task的地址和lr寄存器 */
+    /* 从MSP中加载之前保存的最近任务的地址和lr寄存器 */
     /* 因为之前跳转过函数，寄存器的值会重置 */
-    ldmia sp!, {r2, lr}
+    ldmia sp!, {r3, lr}
 
     /* 重新从最近任务中读取栈顶指针 */
     /* 此时为新的栈顶指针 */
-    ldr r0, [r2]
+    ldr r0, [r3]
     ldr r0, [r0]
 
     /* 从任务栈中加载对应寄存器 */

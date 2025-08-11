@@ -29,8 +29,6 @@ static struct TaskStruct task_structures[TASK_MAX_NUM];
 static size_t task_structures_pos = 0U;
 #endif
 
-static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
-static void Task_startFirstTask(void);
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack);
 static void Task_deleteTaskStruct(struct TaskStruct *const task);
 
@@ -87,9 +85,11 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
 
     Task_suspendScheduling();
 
+    extern Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
+
     struct TaskStruct* task = Task_newTaskStruct(
         stack,
-        Task_initTaskStack(top_of_stack, fn, arg)
+        InitTaskStack_Port(top_of_stack, fn, arg)
     );
 
     Task_resumeScheduling();
@@ -248,7 +248,8 @@ int Task_exec() {
         SysTick_VALUE_Reg = 0;
         SysTick_CTRL_Reg = SysTick_ENABLE_Bit | SysTick_INT_Bit | SysTick_CLK_Bit;
 
-        Task_startFirstTask();
+        extern void StartFirstTask_Port();
+        StartFirstTask_Port();
         return 0;
     }
 
@@ -318,30 +319,19 @@ struct TaskListNode *Task_popFromTaskList() {
     return front_node;
 }
 
+bool Task_needsSwitch() {
+    if ((scheduling_suspended == 0U) && (current_task->sched_method == SCHED_RR)) {
+        return true;
+    }
+    return false;
+}
+
 /* 当任务函数返回时会回到这个函数 */
-static void TaskReturnHandler() {
+void TaskReturnHandler() {
     Task_deleteSelf();
 
     for (;;) {
     }
-}
-
-/* 初始化任务栈 */
-static Stack_t *Task_initTaskStack(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
-    /* xPSR寄存器 */
-    *(--top_of_stack) = 0x01000000; /* 以Thumb指令模式执行(内存受限场景, Cortex-M平台要求) */
-    /* PC寄存器 */
-    *(--top_of_stack) = ((Stack_t)fn) & ((Stack_t)0xFFFFFFFEul); /* 将Thumb指令地址转为函数的实际地址 */
-    /* LR寄存器 */
-    *(--top_of_stack) = (Stack_t)TaskReturnHandler;
-    /* r12, r3, r2, r1寄存器 */
-    top_of_stack -= 4;
-    /* r0寄存器 */
-    *(--top_of_stack) = (Stack_t)arg;
-    /* r11, r10, r9, r8, r7, r6, r5, r4寄存器 */
-    top_of_stack -= 8;
-
-    return top_of_stack;
 }
 
 void Task_switchNextTask() {
@@ -380,28 +370,4 @@ void Task_switchNextTask() {
     }
 
     current_task = task;
-}
-
-__asm static void Task_startFirstTask() {
-    /* 8 字节对齐 */
-    PRESERVE8
-
-    /* 从VTOR寄存器获取初始堆栈指针 */
-    ldr r0, =0xE000ED08
-    ldr r0, [r0]
-    ldr r0, [r0]
-
-    /* 将MSP设置为初始值 */
-    msr msp, r0
-
-    /* 启用全局中断 */
-    cpsie i
-    cpsie f
-    dsb
-    isb
-
-    /* 调用SVC处理函数 */
-    svc 0
-    nop
-    nop
 }

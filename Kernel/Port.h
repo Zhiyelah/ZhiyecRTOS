@@ -7,6 +7,7 @@
 #ifndef _Port_h
 #define _Port_h
 
+#include "Config.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -38,6 +39,29 @@
 
 /* PendSV中断位 */
 #define PendSV_SET_Bit (1UL << 28UL)
+
+#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
+
+/**
+ * @brief 禁用中断
+ */
+static __forceinline void Port_disableInterrupt() {
+    uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
+    __asm {
+        msr basepri, new_basepri
+        dsb
+        isb
+    }
+}
+
+/**
+ * @brief 恢复中断
+ */
+static __forceinline void Port_enableInterrupt() {
+    __asm {
+        msr basepri, #0
+    }
+}
 
 /**
  * @brief 判断当前堆栈指针是否为PSP
