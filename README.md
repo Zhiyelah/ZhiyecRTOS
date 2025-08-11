@@ -28,27 +28,32 @@ git clone https://github.com/Zhiyelah/Zhiyembe.git
 
 Stack_t do_something_task_stack[128];
 void doSomethingTask(void *arg) {
-    /* init */
+    /* 初始化 */
     (void)arg;
 
     while (true) {
-        /* do something */
+        /* 做些什么 */
     }
 }
 
 int main() {
-    /* create task */
+    /* 定义任务属性 */
     struct TaskAttribute do_something_task_attr = {
         .stack = do_something_task_stack,
         .stack_size = sizeof(do_something_task_stack),
         .type = COMMON_TASK,
     };
+    /* 或者也可以这样 */
+    /* TaskAttribute_def(do_something_task_attr, do_something_task_stack, COMMON_TASK); */
+
+    /* 创建任务 */
     Task_create(doSomethingTask, NULL, &do_something_task_attr);
 
+    /* 进入任务循环 */
     return Task_exec();
 }
 ```
 
 ##### 特别说明
-1. 一些模块是可选的，如果禁用了 动态内存分配 则不需要添加 `Memory` 模块
-2. 任务函数返回后会自动删除该任务
+1. 一些模块是可选的，如果禁用了`动态内存分配`则不需要添加 `Memory` 模块
+2. 任务函数`返回`后会自动删除该任务
