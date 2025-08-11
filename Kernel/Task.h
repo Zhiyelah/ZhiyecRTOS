@@ -52,6 +52,13 @@ struct TaskAttribute {
     const Stack_t stack_size;
 };
 
+#define TaskAttribute_def(_name, _stack, _type)     \
+    struct TaskAttribute _name = {                  \
+        .stack = _stack,                            \
+        .stack_size = sizeof(_stack),               \
+        .type = _type,                              \
+    };
+
 struct TaskStruct {
     /* 栈顶指针(必须是结构体的第一个成员) */
     volatile Stack_t *top_of_stack;
