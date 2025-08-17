@@ -58,11 +58,11 @@ struct TaskAttribute {
  * @param _stack 任务栈指针
  * @param _type 任务类型
  */
-#define TaskAttribute_def(_name, _stack, _type) \
-    struct TaskAttribute _name = {              \
-        .stack = _stack,                        \
-        .stack_size = sizeof(_stack),           \
-        .type = _type,                          \
+#define TaskAttribute_def(_name, _stack, _type)           \
+    struct TaskAttribute _name = {                        \
+        .stack = _stack,                                  \
+        .stack_size = sizeof(_stack) / sizeof(_stack[0]), \
+        .type = _type,                                    \
     }
 
 struct TaskStruct {
