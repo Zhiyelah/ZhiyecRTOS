@@ -39,7 +39,7 @@ int main() {
     /* 定义任务属性 */
     struct TaskAttribute do_something_task_attr = {
         .stack = do_something_task_stack,
-        .stack_size = sizeof(do_something_task_stack),
+        .stack_size = sizeof(do_something_task_stack)/sizeof(do_something_task_stack[0]),
         .type = COMMON_TASK,
     };
     /* 或者也可以这样 */
