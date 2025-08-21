@@ -1,11 +1,12 @@
 #include "EventGroup.h"
+#include "Defines.h"
 #include "Task.h"
 
 #define EventGroup_isTriggered(event_group) (event_group->events == 0U)
 
-/* 创建一个事件组 */
-void EventGroup_new(struct EventGroup *const event_group,
-                    const enum EventType events, const enum EventTrigLogic tri_logic) {
+/* 初始化事件组 */
+void EventGroup_init(struct EventGroup *const event_group,
+                     const enum EventType events, const enum EventTrigLogic tri_logic) {
     event_group->events = events;
     event_group->reset_events = events;
     event_group->tri_logic = tri_logic;
@@ -26,15 +27,15 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
     while (!EventGroup_isTriggered(event_group)) {
         Task_suspendScheduling();
 
-        extern struct TaskListNode *Task_popFromTaskList();
-        struct TaskListNode *const front_node = Task_popFromTaskList();
+        extern const struct TaskStruct *const volatile current_task;
+        struct TaskListNode *const front_node = TaskList_remove(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
             return false;
         }
 
-        TaskList_pushSpecialList(&(event_group->tasks_waiting_triggered), front_node);
+        TaskList_push(event_group->tasks_waiting_triggered, front_node);
 
         Task_resumeScheduling();
 
@@ -72,17 +73,14 @@ void EventGroup_trigger(struct EventGroup *const event_group, const enum EventTy
         (event_group->events == (enum EventType)0U)) {
         event_group->events = (enum EventType)0U;
         while (true) {
-            struct TaskListNode *const node = TaskList_popSpecialList(&(event_group->tasks_waiting_triggered));
+            struct TaskListNode *const node = event_group->tasks_waiting_triggered;
+            TaskList_pop(event_group->tasks_waiting_triggered);
 
             if (node == NULL) {
                 break;
             }
 
-            if (node->task->type == COMMON_TASK) {
-                TaskList_pushBack(ACTIVE_TASK_LIST, node);
-            } else if (node->task->type == REALTIME_TASK) {
-                TaskList_pushBack(REALTIME_TASK_LIST, node);
-            }
+            TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
         }
     }
 

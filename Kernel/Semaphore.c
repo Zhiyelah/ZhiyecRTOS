@@ -1,16 +1,17 @@
 #include "Semaphore.h"
+#include "Defines.h"
 #include "Task.h"
 #include <stddef.h>
 
-/* 计数值为布尔值的信号量 */
-void Semaphore_newBinary(struct Semaphore *const sem) {
+/* 初始化为计数值为布尔类型的信号量 */
+void Semaphore_initBinary(struct Semaphore *const sem) {
     sem->state = 1;
     sem->timeout = 0U;
     sem->tasks_waiting_to_acquire = NULL;
 }
 
-/* 整型计数信号量 */
-void Semaphore_newCounting(struct Semaphore *const sem, const unsigned int count) {
+/* 初始化为计数值为整型的信号量 */
+void Semaphore_initCounting(struct Semaphore *const sem, const unsigned int count) {
     sem->state = count;
     sem->timeout = 0U;
     sem->tasks_waiting_to_acquire = NULL;
@@ -49,15 +50,15 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem, const bool has_
 
         Task_suspendScheduling();
 
-        extern struct TaskListNode *Task_popFromTaskList();
-        struct TaskListNode *const front_node = Task_popFromTaskList();
+        extern const struct TaskStruct *const volatile current_task;
+        struct TaskListNode *const front_node = TaskList_remove(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
             return false;
         }
 
-        TaskList_pushSpecialList(&(sem->tasks_waiting_to_acquire), front_node);
+        TaskList_push(sem->tasks_waiting_to_acquire, front_node);
 
         Task_resumeScheduling();
 
@@ -88,13 +89,10 @@ void Semaphore_release(struct Semaphore *const sem) {
         Task_suspendScheduling();
 
         /* 唤醒一个等待获得信号量的任务 */
-        struct TaskListNode *const node = TaskList_popSpecialList(&(sem->tasks_waiting_to_acquire));
+        struct TaskListNode *const node = sem->tasks_waiting_to_acquire;
+        TaskList_pop(sem->tasks_waiting_to_acquire);
         if (node != NULL) {
-            if (node->task->type == COMMON_TASK) {
-                TaskList_pushBack(ACTIVE_TASK_LIST, node);
-            } else if (node->task->type == REALTIME_TASK) {
-                TaskList_pushBack(REALTIME_TASK_LIST, node);
-            }
+            TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
         }
 
         Task_resumeScheduling();

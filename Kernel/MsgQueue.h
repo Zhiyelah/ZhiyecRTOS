@@ -37,14 +37,14 @@ struct MsgQueue {
 };
 
 /**
- * @brief 创建一个消息队列
+ * @brief 初始化消息队列
  * @param msq_queue 消息对象
  * @param type_size 消息数据类型大小
  * @param buffer 消息缓冲区
  * @param buffer_size 缓冲区大小
  */
-void MsgQueue_new(struct MsgQueue *const msg_queue,
-                  const size_t type_size, const void *const buffer, const size_t buffer_size);
+void MsgQueue_init(struct MsgQueue *const msg_queue,
+                   const size_t type_size, const void *const buffer, const size_t buffer_size);
 
 /**
  * @brief 发送消息

@@ -21,17 +21,17 @@ struct Semaphore {
 };
 
 /**
- * @brief 创建一个计数值为布尔值的信号量
+ * @brief 初始化为二值信号量
  * @param sem 信号量对象
  */
-void Semaphore_newBinary(struct Semaphore *const sem);
+void Semaphore_initBinary(struct Semaphore *const sem);
 
 /**
- * @brief 整型计数信号量
+ * @brief 初始化为计数信号量
  * @param sem 信号量对象
  * @param count 初始计数值
  */
-void Semaphore_newCounting(struct Semaphore *const sem, const unsigned int count);
+void Semaphore_initCounting(struct Semaphore *const sem, const unsigned int count);
 
 /**
  * @brief 获得信号量

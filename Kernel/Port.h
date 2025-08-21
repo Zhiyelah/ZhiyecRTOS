@@ -8,6 +8,7 @@
 #define _Port_h
 
 #include "Config.h"
+#include "Defines.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -68,5 +69,15 @@ static __forceinline void Port_enableInterrupt() {
  * @return 如果当前堆栈指针为PSP则返回true, 否则返回false
  */
 bool Port_isUsingPSP(void);
+
+/**
+ * @brief 堆栈初始化接口
+ */
+Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
+
+/**
+ * @brief 任务执行接口
+ */
+void StartFirstTask_Port(void);
 
 #endif /* _Port_h */

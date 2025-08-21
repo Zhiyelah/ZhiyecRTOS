@@ -2,7 +2,6 @@
 #include "Config.h"
 #include "Port.h"
 #include "Task.h"
-#include <stddef.h>
 
 #define MEMORYPOOL_SIZE (CONFIG_MEMORYPOOL_SIZE)
 

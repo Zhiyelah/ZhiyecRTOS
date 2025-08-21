@@ -8,19 +8,20 @@
 #define _Task_h
 
 #include "Config.h"
+#include "Defines.h"
 #include "Port.h"
 #include "Tick.h"
 #include <stdbool.h>
 #include <stdint.h>
 
-/* 32位系统的栈单位大小 */
-typedef uint32_t Stack_t;
-
 enum TaskType {
     /* 普通任务 */
     COMMON_TASK = 0U,
     /* 实时任务 */
-    REALTIME_TASK
+    REALTIME_TASK,
+
+    /* 枚举数量(必须是枚举的最后一位) */
+    TASKTYPE_NUM
 };
 
 enum SchedMethod {
@@ -65,6 +66,10 @@ struct TaskAttribute {
         .type = _type,                                    \
     }
 
+struct TaskListNode {
+    struct TaskListNode *next;
+};
+
 struct TaskStruct {
     /* 栈顶指针(必须是结构体的第一个成员) */
     volatile Stack_t *top_of_stack;
@@ -78,6 +83,8 @@ struct TaskStruct {
     enum TaskType type;
     /* 调度方法 */
     enum SchedMethod sched_method;
+    /* 任务链表 */
+    struct TaskListNode node;
     /* 挂起恢复的时间 */
     Tick_t resume_time;
 };

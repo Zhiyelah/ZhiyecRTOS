@@ -37,7 +37,7 @@ struct EventGroup {
 };
 
 /**
- * @brief 创建一个事件组
+ * @brief 初始化事件组
  * @param event_group 事件组对象
  * @param events 事件类型, 可以是下列的其中一个:
  *          EVENT_INPUTDEVICE,
@@ -48,8 +48,8 @@ struct EventGroup {
             EVENT_TRIG_ANY,
             EVENT_TRIG_ALL
  */
-void EventGroup_new(struct EventGroup *const event_group,
-                    const enum EventType events, const enum EventTrigLogic tri_logic);
+void EventGroup_init(struct EventGroup *const event_group,
+                     const enum EventType events, const enum EventTrigLogic tri_logic);
 
 /**
  * @brief 监听事件, 当前任务进入阻塞, 直到事件触发; 监听失败立即返回

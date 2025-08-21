@@ -7,11 +7,9 @@
 #ifndef _Tick_h
 #define _Tick_h
 
+#include "Defines.h"
 #include <stdbool.h>
 #include <stdint.h>
-
-typedef uint32_t Tick_t;
-typedef int32_t STick_t;
 
 /**
  * @brief 获取当前ticks

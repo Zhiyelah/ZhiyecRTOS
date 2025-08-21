@@ -10,46 +10,35 @@
 #include "Task.h"
 #include <stdbool.h>
 
-struct TaskListNode {
-    struct TaskStruct *task;
-    struct TaskListNode *next;
-};
+/* 无哨兵节点的链表管理 */
 
-enum TaskListType {
-    ACTIVE_TASK_LIST = 0U,
-    REALTIME_TASK_LIST
-};
+#define TaskList_push(list_head, node) \
+    do {                               \
+        (node)->next = (list_head);    \
+        (list_head) = (node);          \
+    } while (0)
 
-enum FunctionalListType {
-    BLOCKED_TASK_LIST = 0U,
-    TO_DELETE_TASK_LIST
-};
+#define TaskList_pop(list_head) ((list_head != NULL) && ({            \
+                                     (list_head) = (list_head)->next; \
+                                 }))
 
-/* 任务列表接口 */
+/* 结束 */
 
-void TaskList_pushBack(const enum TaskListType type, struct TaskListNode *const node);
-struct TaskListNode *TaskList_pop(const enum TaskListType type);
-void TaskList_pushSpecialList(struct TaskListNode **const list_head, struct TaskListNode *const node);
-void TaskList_pushSpecialListByEnum(const enum FunctionalListType type, struct TaskListNode *const node);
-struct TaskListNode *TaskList_popSpecialList(struct TaskListNode **const list_head);
-struct TaskListNode *TaskList_popSpecialListByEnum(const enum FunctionalListType type);
-bool TaskList_addNewTask(struct TaskStruct *const task);
-void TaskList_freeTask(struct TaskListNode *const node);
+/* 有哨兵节点的链表管理 */
 
-/* 实时任务接口 */
+void TaskList_append(const enum TaskType type, struct TaskListNode *const node);
+struct TaskListNode *TaskList_remove(const enum TaskType type);
+
+/* 结束 */
+
+/* 获取任务接口 */
 
 bool TaskList_hasRealTimeTask(void);
 struct TaskStruct *TaskList_getFrontRealTimeTask(void);
 
-/* 活跃任务接口 */
+bool TaskList_hasCommonTask(void);
+struct TaskStruct *TaskList_getFrontCommonTask(void);
 
-bool TaskList_hasActiveTask(void);
-struct TaskStruct *TaskList_getFrontActiveTask(void);
-
-/* 阻塞支持 */
-
-bool TaskList_hasBlockedTask(void);
-void TaskList_insertBlockedList(struct TaskListNode *const front_node);
-Tick_t TaskList_getFrontBlockedTaskTime(void);
+/* 结束 */
 
 #endif /* _TaskList_h */
