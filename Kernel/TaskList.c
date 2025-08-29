@@ -44,7 +44,7 @@ void TaskList_append(const enum TaskType type, struct TaskListNode *const node) 
 }
 
 /* 将列表的头节点移除并返回它 */
-struct TaskListNode *TaskList_remove(const enum TaskType type) {
+struct TaskListNode *TaskList_removeFront(const enum TaskType type) {
     struct TaskListNode *const list_head = task_list[type].head;
     struct TaskListNode **const list_tail = &(task_list[type].tail);
 

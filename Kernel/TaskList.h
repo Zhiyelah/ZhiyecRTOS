@@ -27,7 +27,7 @@
 /* 有哨兵节点的链表管理 */
 
 void TaskList_append(const enum TaskType type, struct TaskListNode *const node);
-struct TaskListNode *TaskList_remove(const enum TaskType type);
+struct TaskListNode *TaskList_removeFront(const enum TaskType type);
 
 /* 结束 */
 

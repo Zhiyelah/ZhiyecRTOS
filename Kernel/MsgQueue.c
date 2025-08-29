@@ -43,7 +43,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
 
         Task_suspendScheduling();
 
-        struct TaskListNode *const front_node = TaskList_remove(current_task->type);
+        struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
@@ -54,7 +54,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
 
         Task_resumeScheduling();
 
-        yield();
+        Task_yield();
     }
 
     Task_suspendScheduling();
@@ -118,7 +118,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
 
         Task_suspendScheduling();
 
-        struct TaskListNode *const front_node = TaskList_remove(current_task->type);
+        struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
@@ -129,7 +129,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
 
         Task_resumeScheduling();
 
-        yield();
+        Task_yield();
     }
 
     Task_suspendScheduling();
@@ -157,7 +157,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
     Task_resumeScheduling();
 
     if (msg_queue->tasks_count != 0U) {
-        yield();
+        Task_yield();
     }
 
     return true;

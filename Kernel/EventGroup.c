@@ -28,7 +28,7 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
         Task_suspendScheduling();
 
         extern const struct TaskStruct *const volatile current_task;
-        struct TaskListNode *const front_node = TaskList_remove(current_task->type);
+        struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
@@ -39,7 +39,7 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
 
         Task_resumeScheduling();
 
-        yield();
+        Task_yield();
     }
 
     Task_suspendScheduling();

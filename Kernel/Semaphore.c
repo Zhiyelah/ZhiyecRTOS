@@ -51,7 +51,7 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem, const bool has_
         Task_suspendScheduling();
 
         extern const struct TaskStruct *const volatile current_task;
-        struct TaskListNode *const front_node = TaskList_remove(current_task->type);
+        struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
@@ -62,7 +62,7 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem, const bool has_
 
         Task_resumeScheduling();
 
-        yield();
+        Task_yield();
     }
 
     return true;

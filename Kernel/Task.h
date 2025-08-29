@@ -47,10 +47,10 @@ struct TaskAttribute {
     const enum SchedMethod sched_method;
 
     /* 堆栈指针(在开启动态内存分配时可选择为空) */
-    Stack_t *const stack;
+    Stack_t *stack;
 
     /* 堆栈大小 */
-    const Stack_t stack_size;
+    Stack_t stack_size;
 };
 
 /**
@@ -85,7 +85,7 @@ struct TaskStruct {
     enum SchedMethod sched_method;
     /* 任务链表 */
     struct TaskListNode node;
-    /* 挂起恢复的时间 */
+    /* 恢复执行的时间 */
     Tick_t resume_time;
 };
 
@@ -109,6 +109,13 @@ int Task_exec(void);
 void Task_sleep(const Tick_t ticks);
 
 /**
+ * @brief 当前任务进入阻塞, 直到指定的时间点; 如果超时立即返回, 确保任务执行的周期性
+ * @param prev_wake_time 上次唤醒时间
+ * @param interval 时间间隔
+ */
+void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval);
+
+/**
  * @brief 在任务中调用, 删除当前任务
  */
 void Task_deleteSelf(void);
@@ -116,7 +123,7 @@ void Task_deleteSelf(void);
 /**
  * @brief 让出CPU
  */
-#define yield()                              \
+#define Task_yield()                         \
     {                                        \
         Interrupt_CTRL_Reg = PendSV_SET_Bit; \
         __dsb(0xFu);                         \
