@@ -1,7 +1,8 @@
 /**
  * @file Semaphore.h
  * @author Zhiyelah
- * @brief 信号量(可选的)
+ * @brief 信号量
+ * @note 可选的模块
  */
 
 #ifndef _Semaphore_h
@@ -37,14 +38,15 @@ void Semaphore_initCounting(struct Semaphore *const sem, const unsigned int coun
  * @brief 获得信号量
  * @param sem 信号量对象
  */
-bool Semaphore_acquire(struct Semaphore *const sem);
+void Semaphore_acquire(struct Semaphore *const sem);
 
 /**
  * @brief 尝试获得信号量, 超时后返回
  * @param sem 信号量对象
  * @param timeout 超时时间
+ * @return 是否成功获得信号量
  */
-bool Semaphore_tryAcquire(struct Semaphore *const sem, Tick_t timeout);
+bool Semaphore_tryAcquire(struct Semaphore *const sem, const Tick_t timeout);
 
 /**
  * @brief 释放信号量

@@ -1,7 +1,8 @@
 /**
  * @file Hook.h
  * @author Zhiyelah
- * @brief 内核钩子(可选的)
+ * @brief 内核钩子
+ * @note 可选的模块
  */
 
 #ifndef _Hook_h

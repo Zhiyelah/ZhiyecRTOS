@@ -1,8 +1,20 @@
+/**
+ * @file Defines.h
+ * @author Zhiyelah
+ * @brief 内核定义汇总
+ */
+
 #ifndef _Defines_h
 #define _Defines_h
 
+/**
+ * 计算结构体成员偏移
+ */
 #define offsetof(type, member) ((size_t)&(((type *)0)->member))
 
+/**
+ * 获取链表容器
+ */
 #define container_of(ptr, type, member) ((type *)((char *)(ptr) - offsetof(type, member)))
 
 #include <stdint.h>

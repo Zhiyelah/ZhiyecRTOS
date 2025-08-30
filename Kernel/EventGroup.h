@@ -1,7 +1,8 @@
 /**
  * @file EventGroup.h
  * @author Zhiyelah
- * @brief 事件组(可选的)
+ * @brief 事件组
+ * @note 可选的模块
  */
 
 #ifndef _EventGroup_h

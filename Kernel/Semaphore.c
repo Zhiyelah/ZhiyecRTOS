@@ -69,12 +69,12 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem, const bool has_
 }
 
 /* 获得信号量 */
-bool Semaphore_acquire(struct Semaphore *const sem) {
-    return Semaphore_acquireHelper(sem, false);
+void Semaphore_acquire(struct Semaphore *const sem) {
+    Semaphore_acquireHelper(sem, false);
 }
 
 /* 尝试获得信号量, 超时后返回 */
-bool Semaphore_tryAcquire(struct Semaphore *const sem, Tick_t timeout) {
+bool Semaphore_tryAcquire(struct Semaphore *const sem, const Tick_t timeout) {
     sem->timeout = timeout;
     return Semaphore_acquireHelper(sem, true);
 }

@@ -1,7 +1,8 @@
 /**
  * @file Memory.h
  * @author Zhiyelah
- * @brief 动态内存分配(在配置文件启用该功能后添加)
+ * @brief 动态内存分配
+ * @note 在配置文件中启用动态内存分配功能后添加
  */
 
 #ifndef _Memory_h

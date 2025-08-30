@@ -1,7 +1,8 @@
 /**
  * @file MsgQueue.h
  * @author Zhiyelah
- * @brief 消息队列(可选的)
+ * @brief 消息队列
+ * @note 可选的模块
  */
 
 #ifndef _MsgQueue_h
