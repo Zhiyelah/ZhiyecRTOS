@@ -12,7 +12,9 @@
 #include "Task.h"
 
 struct Mutex {
+    /* 基于信号量 */
     struct Semaphore sem;
+    /* 锁拥有者 */
     const struct TaskStruct *owner;
 };
 

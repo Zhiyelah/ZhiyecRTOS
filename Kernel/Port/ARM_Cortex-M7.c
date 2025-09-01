@@ -67,16 +67,16 @@ __asm void StartFirstTask_Port() {
 void SysTick_Handler_Port() {
     /* 默认以特权模式执行 */
 
-#ifdef Hook_SysTick
-    Hook_enterSysTickISR();
+#ifdef Hook_isrSysTickEntry
+    Hook_isrSysTickEntry();
 #endif
 
     Port_disableInterrupt();
 
     kernel_Tick_inc();
 
-    extern bool Task_needsSwitch();
-    if (Task_needsSwitch()) {
+    extern bool Task_needSwitch();
+    if (Task_needSwitch()) {
         Interrupt_CTRL_Reg = PendSV_SET_Bit;
     }
 

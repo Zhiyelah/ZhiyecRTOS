@@ -1,95 +1,61 @@
 #include "TaskList.h"
 #include "Defines.h"
+#include "QueueList.h"
 #include <stddef.h>
-
-/* 普通任务列表 */
-static struct TaskListNode common_task_list;
-
-/* 实时任务列表 */
-static struct TaskListNode realtime_task_list;
-
-/* 获取列表头节点 */
-#define TaskList_getHead(list) ((struct TaskListNode *)&(list))
 
 /**
  * head节点没有容器
  * head->next是当前运行的任务
  */
 
-/* 任务列表索引 */
-static struct {
-    struct TaskListNode *const head;
-    struct TaskListNode *tail;
-} task_list[TASKTYPE_NUM] = {
-    /* 普通任务的链表指针 */ {
-        .head = TaskList_getHead(common_task_list),
-        .tail = TaskList_getHead(common_task_list),
-    },
-    /* 实时任务的链表指针 */ {
-        .head = TaskList_getHead(realtime_task_list),
-        .tail = TaskList_getHead(realtime_task_list),
-    },
-};
+/**
+ * @brief 任务列表索引
+ * @param index 任务类型
+ */
+static struct QueueList task_list[TASKTYPE_NUM];
 
-/* 任务列表是否为空 */
-#define TaskList_isEmpty(task_type) (task_list[(task_type)].head == task_list[(task_type)].tail)
+/* 任务列表是否已初始化 */
+bool TaskList_isInit() {
+    return task_list->tail != NULL;
+}
+
+/* 初始化任务列表 */
+void TaskList_init() {
+    for (size_t i = 0; i < TASKTYPE_NUM; ++i) {
+        QueueList_init(task_list[i]);
+    }
+}
 
 /* 将节点添加到列表尾部 */
-void TaskList_append(const enum TaskType type, struct TaskListNode *const node) {
-    struct TaskListNode **const list_tail = &(task_list[type].tail);
-
-    node->next = NULL;
-    (*list_tail)->next = node;
-    *list_tail = (*list_tail)->next;
+void TaskList_append(const enum TaskType type, struct SListHead *const node) {
+    QueueList_push(task_list[type], node);
 }
 
 /* 将列表的头节点移除并返回它 */
-struct TaskListNode *TaskList_removeFront(const enum TaskType type) {
-    struct TaskListNode *const list_head = task_list[type].head;
-    struct TaskListNode **const list_tail = &(task_list[type].tail);
+struct SListHead *TaskList_removeFront(const enum TaskType type) {
+    struct QueueList *const list = &(task_list[type]);
 
-    if (list_head == *list_tail) {
+    if (QueueList_isEmpty(*list)) {
         return NULL;
     }
 
-    struct TaskListNode *const front_node = list_head->next;
+    struct SListHead *const front_node = QueueList_front(*list);
 
-    /* 从列表中移除 */
-    list_head->next = front_node->next;
-    /* 回退尾指针 */
-    if (front_node == *list_tail) {
-        *list_tail = list_head;
-    }
-
-    front_node->next = NULL;
+    QueueList_pop(*list);
 
     return front_node;
 }
 
-/* 有实时任务 */
-bool TaskList_hasRealTimeTask() {
-    return !TaskList_isEmpty(REALTIME_TASK);
+/* 任务列表是否有任务 */
+bool TaskList_hasTask(const enum TaskType type) {
+    return !QueueList_isEmpty(task_list[type]);
 }
 
-/* 获取第一个实时任务 */
-struct TaskStruct *TaskList_getFrontRealTimeTask() {
-    if (TaskList_isEmpty(REALTIME_TASK)) {
+/* 获取任务列表的第一个任务 */
+struct TaskStruct *TaskList_getFrontTask(const enum TaskType type) {
+    if (QueueList_isEmpty(task_list[type])) {
         return NULL;
     }
 
-    return container_of(TaskList_getHead(realtime_task_list)->next, struct TaskStruct, node);
-}
-
-/* 有普通任务 */
-bool TaskList_hasCommonTask() {
-    return !TaskList_isEmpty(COMMON_TASK);
-}
-
-/* 获取第一个普通任务 */
-struct TaskStruct *TaskList_getFrontCommonTask() {
-    if (TaskList_isEmpty(COMMON_TASK)) {
-        return NULL;
-    }
-
-    return container_of(TaskList_getHead(common_task_list)->next, struct TaskStruct, node);
+    return container_of(QueueList_front(task_list[type]), struct TaskStruct, node);
 }

@@ -8,17 +8,15 @@
 #ifndef _Semaphore_h
 #define _Semaphore_h
 
-#include "TaskList.h"
+#include "QueueList.h"
 #include "Tick.h"
 #include <stdbool.h>
 
 struct Semaphore {
     /* 信号量状态 */
     volatile int state;
-    /* 超时时间 */
-    Tick_t timeout;
     /* 等待获得信号量的任务 */
-    struct TaskListNode *tasks_waiting_to_acquire;
+    struct QueueList tasks_waiting_to_acquire;
 };
 
 /**
@@ -51,6 +49,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, const Tick_t timeout);
 /**
  * @brief 释放信号量
  * @param sem 信号量对象
+ * @note 可在ISR中调用
  */
 void Semaphore_release(struct Semaphore *const sem);
 

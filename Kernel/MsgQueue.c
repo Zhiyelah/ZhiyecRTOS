@@ -1,6 +1,7 @@
 #include "MsgQueue.h"
 #include "Defines.h"
-#include "Task.h"
+#include "StackList.h"
+#include "TaskList.h"
 
 extern const struct TaskStruct *const volatile current_task;
 
@@ -11,8 +12,8 @@ void MsgQueue_init(struct MsgQueue *const msg_queue,
     msg_queue->buffer_size = buffer_size;
     msg_queue->type_size = type_size;
     msg_queue->timeout = 0U;
-    msg_queue->tasks_waiting_to_send = NULL;
-    msg_queue->tasks_waiting_to_receive = NULL;
+    StackList_init(msg_queue->tasks_waiting_to_send);
+    StackList_init(msg_queue->tasks_waiting_to_receive);
     msg_queue->tasks_count = 0U;
     msg_queue->queue_head = 0U;
     msg_queue->queue_tail = 0U;
@@ -43,14 +44,14 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
 
         Task_suspendScheduling();
 
-        struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
+        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
             return false;
         }
 
-        TaskList_push(msg_queue->tasks_waiting_to_send, front_node);
+        StackList_push(msg_queue->tasks_waiting_to_send, front_node);
 
         Task_resumeScheduling();
 
@@ -68,13 +69,9 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
     ++(msg_queue->queue_count);
 
     /* 唤醒等待接收消息的任务 */
-    while (true) {
-        struct TaskListNode *const node = msg_queue->tasks_waiting_to_receive;
-        TaskList_pop(msg_queue->tasks_waiting_to_receive);
-
-        if (node == NULL) {
-            break;
-        }
+    while (!StackList_isEmpty(msg_queue->tasks_waiting_to_receive)) {
+        struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_receive);
+        StackList_pop(msg_queue->tasks_waiting_to_receive);
 
         TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
     }
@@ -118,14 +115,14 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
 
         Task_suspendScheduling();
 
-        struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
+        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node == NULL) {
             Task_resumeScheduling();
             return false;
         }
 
-        TaskList_push(msg_queue->tasks_waiting_to_receive, front_node);
+        StackList_push(msg_queue->tasks_waiting_to_receive, front_node);
 
         Task_resumeScheduling();
 
@@ -147,9 +144,10 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
         --(msg_queue->queue_count);
 
         /* 唤醒一个等待发送消息的任务 */
-        struct TaskListNode *const node = msg_queue->tasks_waiting_to_send;
-        TaskList_pop(msg_queue->tasks_waiting_to_send);
-        if (node != NULL) {
+        if (!StackList_isEmpty(msg_queue->tasks_waiting_to_send)) {
+            struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_send);
+            StackList_pop(msg_queue->tasks_waiting_to_send);
+
             TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
         }
     }

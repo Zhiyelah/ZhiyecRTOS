@@ -11,10 +11,10 @@
 #include "Mutex.h"
 
 struct ReentrantLock {
-    /* 内嵌互斥锁 */
+    /* 基于互斥锁 */
     struct Mutex mutex;
     /* 锁计数器 */
-    int state;
+    volatile int state;
 };
 
 /**

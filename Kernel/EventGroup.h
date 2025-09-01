@@ -8,7 +8,7 @@
 #ifndef _EventGroup_h
 #define _EventGroup_h
 
-#include "TaskList.h"
+#include "StackList.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -32,7 +32,7 @@ struct EventGroup {
     /* 触发逻辑 */
     enum EventTrigLogic tri_logic;
     /* 等待事件触发的任务 */
-    struct TaskListNode *tasks_waiting_triggered;
+    struct StackList tasks_waiting_triggered;
     /* 任务数 */
     size_t tasks_count;
 };

@@ -9,9 +9,11 @@
 
 #include "Config.h"
 #include "Defines.h"
+#include "List.h"
 #include "Port.h"
 #include "Tick.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 enum TaskType {
@@ -66,10 +68,6 @@ struct TaskAttribute {
         .type = _type,                                    \
     }
 
-struct TaskListNode {
-    struct TaskListNode *next;
-};
-
 struct TaskStruct {
     /* 栈顶指针(必须是结构体的第一个成员) */
     volatile Stack_t *top_of_stack;
@@ -84,16 +82,17 @@ struct TaskStruct {
     /* 调度方法 */
     enum SchedMethod sched_method;
     /* 任务链表 */
-    struct TaskListNode node;
+    struct SListHead node;
     /* 恢复执行的时间 */
     Tick_t resume_time;
 };
 
 /**
- * @brief 创建任务 线程安全
+ * @brief 创建任务
  * @param fn 任务函数
  * @param arg 任务函数参数
  * @param attr 任务属性
+ * @note 线程安全
  */
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr);
 
@@ -103,15 +102,17 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
 int Task_exec(void);
 
 /**
- * @brief 当前任务进入阻塞, 并切换到下一个任务, 一段时间后恢复
+ * @brief 任务睡眠
  * @param ticks 阻塞时间
+ * @note 当前任务进入阻塞, 并切换到下一个任务, 一段时间后恢复
  */
 void Task_sleep(const Tick_t ticks);
 
 /**
- * @brief 当前任务进入阻塞, 直到指定的时间点; 如果超时立即返回, 确保任务执行的周期性
+ * @brief 绝对时间睡眠
  * @param prev_wake_time 上次唤醒时间
  * @param interval 时间间隔
+ * @note 当前任务进入阻塞, 直到指定的时间点; 如果超时立即返回, 确保任务执行的周期性
  */
 void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval);
 
@@ -119,6 +120,12 @@ void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval);
  * @brief 在任务中调用, 删除当前任务
  */
 void Task_deleteSelf(void);
+
+/**
+ * @brief 获取任务个数
+ * @return 任务个数
+ */
+size_t Task_getCount(void);
 
 /**
  * @brief 让出CPU

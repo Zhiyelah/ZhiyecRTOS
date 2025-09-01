@@ -10,6 +10,9 @@
 /**
  * 计算结构体成员偏移
  */
+#ifdef offsetof
+#undef offsetof
+#endif /* offsetof */
 #define offsetof(type, member) ((size_t)&(((type *)0)->member))
 
 /**

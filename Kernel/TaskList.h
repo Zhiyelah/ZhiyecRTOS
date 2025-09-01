@@ -7,37 +7,23 @@
 #ifndef _TaskList_h
 #define _TaskList_h
 
+#include "List.h"
 #include "Task.h"
 #include <stdbool.h>
 
-/* 无哨兵节点的链表管理 */
+/* 任务列表API */
 
-#define TaskList_push(list_head, node) \
-    do {                               \
-        (node)->next = (list_head);    \
-        (list_head) = (node);          \
-    } while (0)
-
-#define TaskList_pop(list_head) ((list_head != NULL) && ({            \
-                                     (list_head) = (list_head)->next; \
-                                 }))
-
-/* 结束 */
-
-/* 有哨兵节点的链表管理 */
-
-void TaskList_append(const enum TaskType type, struct TaskListNode *const node);
-struct TaskListNode *TaskList_removeFront(const enum TaskType type);
+bool TaskList_isInit(void);
+void TaskList_init(void);
+void TaskList_append(const enum TaskType type, struct SListHead *const node);
+struct SListHead *TaskList_removeFront(const enum TaskType type);
 
 /* 结束 */
 
 /* 获取任务接口 */
 
-bool TaskList_hasRealTimeTask(void);
-struct TaskStruct *TaskList_getFrontRealTimeTask(void);
-
-bool TaskList_hasCommonTask(void);
-struct TaskStruct *TaskList_getFrontCommonTask(void);
+bool TaskList_hasTask(const enum TaskType type);
+struct TaskStruct *TaskList_getFrontTask(const enum TaskType type);
 
 /* 结束 */
 

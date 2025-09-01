@@ -11,12 +11,12 @@
 /* 注册钩子 */
 
 /* SysTick中断钩子 */
-#define Hook_enterSysTickISR() ((void)0)
+#define Hook_isrSysTickEntry() ((void)0)
 
 /* 空闲任务钩子 */
-#define Hook_runIdleTask() ((void)0)
+#define Hook_idleTaskRunning() ((void)0)
 
 /* 任务删除钩子 */
-#define Hook_deleteTask(task) ((void)0)
+#define Hook_taskDeletion(task) ((void)0)
 
 #endif /* _Hook_h */

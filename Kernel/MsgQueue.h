@@ -8,7 +8,7 @@
 #ifndef _MsgQueue_h
 #define _MsgQueue_h
 
-#include "TaskList.h"
+#include "StackList.h"
 #include "Tick.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -23,9 +23,9 @@ struct MsgQueue {
     /* 超时时间 */
     Tick_t timeout;
     /* 等待发送消息的任务 */
-    struct TaskListNode *tasks_waiting_to_send;
+    struct StackList tasks_waiting_to_send;
     /* 等待接收消息的任务 */
-    struct TaskListNode *tasks_waiting_to_receive;
+    struct StackList tasks_waiting_to_receive;
     /* 任务数 */
     volatile size_t tasks_count;
 

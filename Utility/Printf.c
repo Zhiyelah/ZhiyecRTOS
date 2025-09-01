@@ -31,7 +31,7 @@ void Printf(const char *format, ...) {
     char *string = Memory_alloc(string_length * sizeof(char));
 #else
     char string[128];
-    const size_t string_length = sizeof(string);
+    const size_t string_length = sizeof(string) / sizeof(string[0]);
 #endif
 
     /* 格式化字符串到字符数组中 */

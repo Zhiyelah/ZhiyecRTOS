@@ -1,7 +1,7 @@
 #include "Task.h"
 #include "Hook.h"
+#include "StackList.h"
 #include "TaskList.h"
-#include <stddef.h>
 
 #define SYSTICK_RATE_HZ (CONFIG_SYSTICK_RATE_HZ)
 #define CPU_CLOCK_HZ (CONFIG_CPU_CLOCK_HZ)
@@ -19,7 +19,8 @@
 /* 调度器暂停计数器 */
 volatile unsigned int scheduling_suspended = 0U;
 
-/* 正在运行任务的指针 */
+/* 用于管理当前任务 */
+static size_t task_count = 0U;
 struct TaskStruct *volatile current_task = NULL;
 
 /* 用于管理空闲任务 */
@@ -34,10 +35,10 @@ static size_t task_structures_pos = 0U;
 #endif
 
 /* 阻塞任务列表 */
-static struct TaskListNode *blocked_task_list_head = NULL;
+static struct StackList blocked_task_list;
 
 /* 等待删除任务列表 */
-static struct TaskListNode *to_delete_task_list_head = NULL;
+static struct StackList to_delete_task_list;
 
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack);
 static void Task_deleteTaskStruct(struct TaskStruct *const task);
@@ -122,6 +123,10 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
 
     Task_suspendScheduling();
 
+    if (!TaskList_isInit()) {
+        TaskList_init();
+    }
+
     if (task->type == KERNEL_IDLE_TASK_TYPE) {
         kernel_idle_task = task;
     } else {
@@ -132,19 +137,21 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         current_task = task;
     }
 
+    ++task_count;
+
     Task_resumeScheduling();
 
     return true;
 }
 
 /* 将任务插入阻塞列表 */
-static inline void Task_insertBlockedList(struct TaskListNode *const front_node) {
-    if (blocked_task_list_head == NULL) {
-        blocked_task_list_head = front_node;
+static inline void Task_insertBlockedList(struct SListHead *const front_node) {
+    if (StackList_isEmpty(blocked_task_list)) {
+        StackList_front(blocked_task_list) = front_node;
     } else {
         /* 按时间升序插入到阻塞列表 */
-        struct TaskListNode *current_node = blocked_task_list_head;
-        struct TaskListNode *prev_node = NULL;
+        struct SListHead *current_node = StackList_front(blocked_task_list);
+        struct SListHead *prev_node = NULL;
         while (current_node != NULL) {
             if (Tick_after(container_of(current_node, struct TaskStruct, node)->resume_time,
                            container_of(front_node, struct TaskStruct, node)->resume_time)) {
@@ -152,7 +159,7 @@ static inline void Task_insertBlockedList(struct TaskListNode *const front_node)
                 if (prev_node != NULL) {
                     prev_node->next = front_node;
                 } else {
-                    blocked_task_list_head = front_node;
+                    StackList_front(blocked_task_list) = front_node;
                 }
                 return;
             }
@@ -170,7 +177,7 @@ static inline void Task_insertBlockedList(struct TaskListNode *const front_node)
 static void Task_sleepHelper(const Tick_t resume_time) {
     Task_suspendScheduling();
 
-    struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
+    struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
     if (front_node == NULL) {
         Task_resumeScheduling();
@@ -206,17 +213,22 @@ void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval) {
 void Task_deleteSelf() {
     Task_suspendScheduling();
 
-    struct TaskListNode *const front_node = TaskList_removeFront(current_task->type);
+    struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
     if (front_node == NULL) {
         Task_resumeScheduling();
         return;
     }
 
-    TaskList_push(to_delete_task_list_head, front_node);
+    StackList_push(to_delete_task_list, front_node);
+    --task_count;
 
     Task_resumeScheduling();
     Task_yield();
+}
+
+size_t Task_getCount() {
+    return task_count;
 }
 
 #define KERNEL_IDLE_TASK_STACK_SIZE 64
@@ -226,31 +238,36 @@ static void kernelIdleTask(void *arg) {
     (void)arg;
 
     for (;;) {
-#ifdef Hook_IdleTask
-        Hook_runIdleTask();
+#ifdef Hook_idleTaskRunning
+        Hook_idleTaskRunning();
 #endif
 
         Task_suspendScheduling();
 
-        struct TaskListNode *to_delete_node = to_delete_task_list_head;
-        TaskList_pop(to_delete_task_list_head);
+        do {
+            if (StackList_isEmpty(to_delete_task_list)) {
+                break;
+            }
 
-        if (to_delete_node != NULL) {
-    #ifdef Hook_deleteTask
-            Hook_deleteTask(container_of(to_delete_node, struct TaskStruct, node));
-    #endif
+            struct SListHead *to_delete_node = StackList_front(to_delete_task_list);
+            StackList_pop(to_delete_task_list);
 
-    #if (USE_DYNAMIC_MEMORY_ALLOCATION)
+#ifdef Hook_taskDeletion
+            Hook_taskDeletion(container_of(to_delete_node, struct TaskStruct, node));
+#endif
+
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
             if (container_of(to_delete_node, struct TaskStruct, node)->is_dynamic_stack) {
                 Memory_free(container_of(to_delete_node, struct TaskStruct, node)->stack);
             }
-    #endif
+#endif
             Task_deleteTaskStruct(container_of(to_delete_node, struct TaskStruct, node));
-        }
+
+        } while (0);
 
         Task_resumeScheduling();
 
-        if (TaskList_hasRealTimeTask() || TaskList_hasCommonTask()) {
+        if (TaskList_hasTask(REALTIME_TASK) || TaskList_hasTask(COMMON_TASK)) {
             Task_yield();
         }
     }
@@ -348,7 +365,7 @@ void TaskReturnHandler() {
 }
 
 /* 是否需要切换任务 */
-bool Task_needsSwitch() {
+bool Task_needSwitch() {
     if ((scheduling_suspended == 0U) && (current_task->sched_method == SCHED_RR)) {
         return true;
     }
@@ -358,24 +375,25 @@ bool Task_needsSwitch() {
 /* 切换下一个任务 */
 void Task_switchNextTask() {
     /* 检查阻塞列表任务是否超时 */
-    if ((blocked_task_list_head != NULL) &&
+    if ((!StackList_isEmpty(blocked_task_list)) &&
         Tick_after(Tick_currentTicks(),
-                   container_of(blocked_task_list_head, struct TaskStruct, node)
+                   container_of(StackList_front(blocked_task_list), struct TaskStruct, node)
                        ->resume_time)) {
-        struct TaskStruct *const timeout_task = container_of(blocked_task_list_head, struct TaskStruct, node);
-        TaskList_pop(blocked_task_list_head);
+        struct TaskStruct *const timeout_task = container_of(StackList_front(blocked_task_list),
+                                                             struct TaskStruct, node);
+        StackList_pop(blocked_task_list);
         TaskList_append(timeout_task->type, &(timeout_task->node));
     }
 
-    struct TaskStruct *front_realtime_task = TaskList_getFrontRealTimeTask();
-    struct TaskStruct *front_common_task = TaskList_getFrontCommonTask();
+    struct TaskStruct *front_realtime_task = TaskList_getFrontTask(REALTIME_TASK);
+    struct TaskStruct *front_common_task = TaskList_getFrontTask(COMMON_TASK);
 
     if (front_realtime_task == current_task) {
         TaskList_append(REALTIME_TASK, TaskList_removeFront(REALTIME_TASK));
-        front_realtime_task = TaskList_getFrontRealTimeTask();
+        front_realtime_task = TaskList_getFrontTask(REALTIME_TASK);
     } else if (front_common_task == current_task) {
         TaskList_append(COMMON_TASK, TaskList_removeFront(COMMON_TASK));
-        front_common_task = TaskList_getFrontCommonTask();
+        front_common_task = TaskList_getFrontTask(COMMON_TASK);
     }
 
     current_task = (front_realtime_task) ? front_realtime_task

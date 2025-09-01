@@ -1,13 +1,18 @@
 #ifndef _List_h
 #define _List_h
 
-/**
- * @brief 双向链表
- */
-struct ListNode {
-    struct ListNode *prev;
-    struct ListNode *next;
+/* 单向链表 */
+struct SListHead {
+    struct SListHead *next;
 };
+
+/* 双向链表 */
+struct ListHead {
+    struct ListHead *prev;
+    struct ListHead *next;
+};
+
+/* 双向链表API */
 
 #define List_init(head) ({ \
     (head)->prev = (head); \
@@ -32,5 +37,7 @@ struct ListNode {
     (node)->prev = NULL;               \
     (node)->next = NULL;               \
 })
+
+/* 结束 */
 
 #endif /* _List_h */
