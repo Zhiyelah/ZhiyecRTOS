@@ -1,9 +1,11 @@
+#include "Port.h"
 #include "Task.h"
 #include "Hook.h"
 
 #define SysTick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
 #define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
+#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
 
 /* 初始化任务栈接口 */
 Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {

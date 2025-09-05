@@ -15,7 +15,7 @@
 
 struct MsgQueue {
     /* 数据缓冲区 */
-    const void *buffer;
+    void *buffer;
     /* 缓冲区大小 */
     size_t buffer_size;
     /* 类型大小 */
@@ -24,8 +24,6 @@ struct MsgQueue {
     struct StackList tasks_waiting_to_send;
     /* 等待接收消息的任务 */
     struct StackList tasks_waiting_to_receive;
-    /* 任务数 */
-    volatile size_t tasks_count;
 
     /* 队头指针（出队位置） */
     size_t queue_head;
@@ -43,7 +41,7 @@ struct MsgQueue {
  * @param buffer_size 缓冲区大小
  */
 void MsgQueue_init(struct MsgQueue *const msg_queue,
-                   const size_t type_size, const void *const buffer, const size_t buffer_size);
+                   const size_t type_size, void *const buffer, const size_t buffer_size);
 
 /**
  * @brief 发送消息

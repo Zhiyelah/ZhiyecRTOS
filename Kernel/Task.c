@@ -37,8 +37,12 @@ static struct StackList blocked_task_list;
 /* 等待删除任务列表 */
 static struct StackList to_delete_task_list;
 
+/* 创建和删除任务对象函数提前声明 */
+
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack);
 static void Task_deleteTaskStruct(struct TaskStruct *const task);
+
+/* 结束 */
 
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr) {
     if (fn == NULL) {

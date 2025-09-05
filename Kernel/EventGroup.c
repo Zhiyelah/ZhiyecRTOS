@@ -9,7 +9,6 @@ void EventGroup_init(struct EventGroup *const event_group,
     event_group->reset_events = events;
     event_group->tri_logic = tri_logic;
     StackList_init(event_group->tasks_waiting_triggered);
-    event_group->tasks_count = 0U;
 }
 
 /* 监听事件 */
@@ -17,10 +16,6 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
     if (event_group == NULL) {
         return false;
     }
-
-    Task_atomic({
-        ++(event_group->tasks_count);
-    });
 
     while (true) {
         Task_beginAtomic();
@@ -42,9 +37,7 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
     }
 
     Task_atomic({
-        --(event_group->tasks_count);
-
-        if (event_group->tasks_count == 0U) {
+        if (StackList_isEmpty(event_group->tasks_waiting_triggered)) {
             event_group->events = event_group->reset_events;
         }
     });

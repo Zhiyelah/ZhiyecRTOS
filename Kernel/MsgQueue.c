@@ -7,13 +7,12 @@ extern const struct TaskStruct *const volatile current_task;
 
 /* 初始化消息队列 */
 void MsgQueue_init(struct MsgQueue *const msg_queue,
-                   const size_t type_size, const void *const buffer, const size_t buffer_size) {
+                   const size_t type_size, void *const buffer, const size_t buffer_size) {
     msg_queue->buffer = buffer;
     msg_queue->buffer_size = buffer_size;
     msg_queue->type_size = type_size;
     StackList_init(msg_queue->tasks_waiting_to_send);
     StackList_init(msg_queue->tasks_waiting_to_receive);
-    msg_queue->tasks_count = 0U;
     msg_queue->queue_head = 0U;
     msg_queue->queue_tail = 0U;
     msg_queue->queue_count = 0U;
@@ -96,10 +95,6 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
         return false;
     }
 
-    Task_atomic({
-        ++(msg_queue->tasks_count);
-    });
-
     Tick_t current_tick = Tick_currentTicks();
 
     while (true) {
@@ -151,9 +146,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
             *(((unsigned char *)data) + i) = *(reader + i);
         }
 
-        --(msg_queue->tasks_count);
-
-        if (msg_queue->tasks_count == 0U) {
+        if (StackList_isEmpty(msg_queue->tasks_waiting_to_receive)) {
             msg_queue->queue_head = (msg_queue->queue_head + 1) % msg_queue->buffer_size;
             --(msg_queue->queue_count);
 
@@ -167,7 +160,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
         }
     });
 
-    if (msg_queue->tasks_count != 0U) {
+    if (!StackList_isEmpty(msg_queue->tasks_waiting_to_receive)) {
         Task_yield();
     }
 

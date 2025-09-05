@@ -20,6 +20,13 @@
  */
 #define container_of(ptr, type, member) ((type *)((char *)(ptr) - offsetof(type, member)))
 
+/* 强制内联 */
+#ifdef __forceinline
+#define FORCEINLINE __forceinline
+#else
+#define FORCEINLINE inline
+#endif /* FORCEINLINE */
+
 #include <stdint.h>
 
 /* 32位系统的栈单位大小 */

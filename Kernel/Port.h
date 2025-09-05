@@ -41,15 +41,13 @@
 /* PendSV中断位 */
 #define PendSV_SET_Bit (1UL << 28UL)
 
-#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
-
 /**
  * @brief 禁用中断
  */
-static __forceinline inline void Port_disableInterrupt() {
+static FORCEINLINE void Port_disableInterrupt() {
     extern volatile int interrupt_disabled_nesting;
 
-    uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
+    uint32_t new_basepri = CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY;
     __asm {
         msr basepri, new_basepri
         dsb
@@ -63,7 +61,7 @@ static __forceinline inline void Port_disableInterrupt() {
  * @brief 禁用中断
  * @note 中断安全的版本
  */
-static __forceinline inline uint32_t Port_disableInterruptFromISR() {
+static FORCEINLINE uint32_t Port_disableInterruptFromISR() {
     uint32_t prev_basepri;
     __asm {
         mrs prev_basepri, basepri
@@ -76,7 +74,7 @@ static __forceinline inline uint32_t Port_disableInterruptFromISR() {
  * @brief 恢复中断
  * @note 中断安全的版本
  */
-static __forceinline inline void Port_enableInterruptFromISR(uint32_t prev_basepri) {
+static FORCEINLINE void Port_enableInterruptFromISR(uint32_t prev_basepri) {
     extern volatile int interrupt_disabled_nesting;
 
     --interrupt_disabled_nesting;
@@ -91,7 +89,7 @@ static __forceinline inline void Port_enableInterruptFromISR(uint32_t prev_basep
 /**
  * @brief 恢复中断
  */
-static __forceinline inline void Port_enableInterrupt() {
+static FORCEINLINE void Port_enableInterrupt() {
     Port_enableInterruptFromISR(0U);
 }
 

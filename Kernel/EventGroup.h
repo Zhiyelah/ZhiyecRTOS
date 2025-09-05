@@ -33,8 +33,6 @@ struct EventGroup {
     enum EventTrigLogic tri_logic;
     /* 等待事件触发的任务 */
     struct StackList tasks_waiting_triggered;
-    /* 任务数 */
-    size_t tasks_count;
 };
 
 /**
