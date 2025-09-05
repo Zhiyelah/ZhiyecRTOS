@@ -15,6 +15,7 @@
 ### 三、特点
 - 低内存占用
 - 低耦合度
+- 高效API
 - 可拓展接口
 
 ### 四、使用
@@ -23,8 +24,9 @@
 git clone https://github.com/Zhiyelah/Zhiyembe.git
 ```
 2. 将模块的源文件和头文件导入到C/C++工程中(Keil、EIDE、或CLion等)
-3. 根据目标芯片修改`Config.h`中的配置项(CPU时钟频率、Tick中断频率、内存池大小等) 
-4. 参考以下示例创建任务
+3. 使用`ARM C Compiler 5`编译, 启用`C99 Mode`
+4. 根据目标芯片修改`Config.h`中的配置项(CPU时钟频率、Tick中断频率、内存池大小等) 
+5. 参考以下示例创建任务
 
 #### 任务创建示例（使用静态内存分配）
 ```C
