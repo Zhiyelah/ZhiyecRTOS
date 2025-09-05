@@ -20,8 +20,6 @@ struct MsgQueue {
     size_t buffer_size;
     /* 类型大小 */
     size_t type_size;
-    /* 超时时间 */
-    Tick_t timeout;
     /* 等待发送消息的任务 */
     struct StackList tasks_waiting_to_send;
     /* 等待接收消息的任务 */
@@ -61,7 +59,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data);
  * @param data 消息存放变量
  * @return 是否接收成功
  */
-bool MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
+void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
 
 /**
  * @brief 尝试接收消息, 超时直接返回失败

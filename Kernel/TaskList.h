@@ -16,6 +16,7 @@
 bool TaskList_isInit(void);
 void TaskList_init(void);
 void TaskList_append(const enum TaskType type, struct SListHead *const node);
+void TaskList_insertFront(const enum TaskType type, struct SListHead *const node);
 struct SListHead *TaskList_removeFront(const enum TaskType type);
 
 /* 结束 */

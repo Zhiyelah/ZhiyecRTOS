@@ -12,9 +12,9 @@ void Mutex_init(struct Mutex *const mutex) {
 void Mutex_lock(struct Mutex *const mutex) {
     Semaphore_acquire(&(mutex->sem));
 
-    Task_suspendScheduling();
-    TaskList_append(REALTIME_TASK, TaskList_removeFront(current_task->type));
-    Task_resumeScheduling();
+    Task_atomic({
+        TaskList_insertFront(REALTIME_TASK, TaskList_removeFront(current_task->type));
+    });
 
     mutex->owner = current_task;
 }
@@ -30,9 +30,9 @@ bool Mutex_tryLock(struct Mutex *const mutex, const Tick_t timeout) {
 
 void Mutex_unlock(struct Mutex *const mutex) {
     if (mutex->owner == current_task) {
-        Task_suspendScheduling();
-        TaskList_append(current_task->type, TaskList_removeFront(REALTIME_TASK));
-        Task_resumeScheduling();
+        Task_atomic({
+            TaskList_insertFront(current_task->type, TaskList_removeFront(REALTIME_TASK));
+        });
 
         mutex->owner = NULL;
 

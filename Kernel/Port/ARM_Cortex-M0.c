@@ -5,16 +5,6 @@
 #define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
 
-__asm bool Port_isUsingPSP() {
-    /* 判断当前sp指针是msp还是psp */
-    mov r0, sp
-    mrs r1, msp
-    cmp r0, r1
-    moveq r0, #0
-    movne r0, #1
-    bx lr
-}
-
 /* 初始化任务栈接口 */
 Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
     /* xPSR寄存器 */
@@ -80,16 +70,16 @@ void SysTick_Handler_Port() {
     Hook_isrSysTickEntry();
 #endif
 
-    Port_disableInterrupt();
+    uint32_t prev_basepri = Port_disableInterruptFromISR();
 
-    kernel_Tick_inc();
+    ++kernel_ticks;
 
     extern bool Task_needSwitch();
     if (Task_needSwitch()) {
         Interrupt_CTRL_Reg = PendSV_SET_Bit;
     }
 
-    Port_enableInterrupt();
+    Port_enableInterruptFromISR(prev_basepri);
 }
 
 __asm void SVC_Handler_Port() {

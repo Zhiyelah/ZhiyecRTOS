@@ -1,6 +1,5 @@
 #include "Printf.h"
 #include "Config.h"
-#include "Task.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -47,8 +46,6 @@ void Printf(const char *format, ...) {
         string[i] = '\0';
     }
 
-    Task_suspendScheduling();
-
     for (size_t i = 0; string[i] != '\0'; ++i) {
         printf_output(string[i]);
     }
@@ -56,6 +53,4 @@ void Printf(const char *format, ...) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     Memory_free(string);
 #endif
-
-    Task_resumeScheduling();
 }

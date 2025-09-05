@@ -16,9 +16,6 @@
 #error "the value "CONFIG_SYSTICK_RATE_HZ" in file Config.h is too small."
 #endif
 
-/* 调度器暂停计数器 */
-volatile unsigned int scheduling_suspended = 0U;
-
 /* 用于管理当前任务 */
 static size_t task_count = 0U;
 struct TaskStruct *volatile current_task = NULL;
@@ -42,16 +39,6 @@ static struct StackList to_delete_task_list;
 
 static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *const top_of_stack);
 static void Task_deleteTaskStruct(struct TaskStruct *const task);
-
-void Task_suspendScheduling() {
-    ++scheduling_suspended;
-}
-
-void Task_resumeScheduling() {
-    if (scheduling_suspended > 0U) {
-        --scheduling_suspended;
-    }
-}
 
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr) {
     if (fn == NULL) {
@@ -94,13 +81,13 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
     /* 内存对齐 */
     top_of_stack = (Stack_t *)(((Stack_t)top_of_stack) & ~((Stack_t)(BYTE_ALIGNMENT - 1)));
 
-    Task_suspendScheduling();
+    Task_beginAtomic();
 
     struct TaskStruct *task = Task_newTaskStruct(
         stack,
         InitTaskStack_Port(top_of_stack, fn, arg));
 
-    Task_resumeScheduling();
+    Task_endAtomic();
 
     if (task == NULL) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
@@ -121,25 +108,23 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         task->sched_method = attr->sched_method;
     }
 
-    Task_suspendScheduling();
+    Task_atomic({
+        if (!TaskList_isInit()) {
+            TaskList_init();
+        }
 
-    if (!TaskList_isInit()) {
-        TaskList_init();
-    }
+        if (task->type == KERNEL_IDLE_TASK_TYPE) {
+            kernel_idle_task = task;
+        } else {
+            TaskList_append(task->type, &(task->node));
+        }
 
-    if (task->type == KERNEL_IDLE_TASK_TYPE) {
-        kernel_idle_task = task;
-    } else {
-        TaskList_append(task->type, &(task->node));
-    }
+        if (current_task == NULL) {
+            current_task = task;
+        }
 
-    if (current_task == NULL) {
-        current_task = task;
-    }
-
-    ++task_count;
-
-    Task_resumeScheduling();
+        ++task_count;
+    });
 
     return true;
 }
@@ -175,19 +160,15 @@ static inline void Task_insertBlockedList(struct SListHead *const front_node) {
 
 /* 将当前任务阻塞 */
 static void Task_sleepHelper(const Tick_t resume_time) {
-    Task_suspendScheduling();
+    Task_atomic({
+        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
-    struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+        if (front_node != NULL) {
+            container_of(front_node, struct TaskStruct, node)->resume_time = resume_time;
+            Task_insertBlockedList(front_node);
+        }
+    });
 
-    if (front_node == NULL) {
-        Task_resumeScheduling();
-        return;
-    }
-
-    container_of(front_node, struct TaskStruct, node)->resume_time = resume_time;
-    Task_insertBlockedList(front_node);
-
-    Task_resumeScheduling();
     Task_yield();
 }
 
@@ -211,19 +192,15 @@ void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval) {
 }
 
 void Task_deleteSelf() {
-    Task_suspendScheduling();
+    Task_atomic({
+        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
-    struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+        if (front_node != NULL) {
+            StackList_push(to_delete_task_list, front_node);
+            --task_count;
+        }
+    });
 
-    if (front_node == NULL) {
-        Task_resumeScheduling();
-        return;
-    }
-
-    StackList_push(to_delete_task_list, front_node);
-    --task_count;
-
-    Task_resumeScheduling();
     Task_yield();
 }
 
@@ -242,30 +219,23 @@ static void kernelIdleTask(void *arg) {
         Hook_idleTaskRunning();
 #endif
 
-        Task_suspendScheduling();
-
-        do {
-            if (StackList_isEmpty(to_delete_task_list)) {
-                break;
-            }
-
-            struct SListHead *to_delete_node = StackList_front(to_delete_task_list);
-            StackList_pop(to_delete_task_list);
+        Task_atomic({
+            if (!StackList_isEmpty(to_delete_task_list)) {
+                struct SListHead *to_delete_node = StackList_front(to_delete_task_list);
+                StackList_pop(to_delete_task_list);
 
 #ifdef Hook_taskDeletion
-            Hook_taskDeletion(container_of(to_delete_node, struct TaskStruct, node));
+                Hook_taskDeletion(container_of(to_delete_node, struct TaskStruct, node));
 #endif
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
-            if (container_of(to_delete_node, struct TaskStruct, node)->is_dynamic_stack) {
-                Memory_free(container_of(to_delete_node, struct TaskStruct, node)->stack);
-            }
+                if (container_of(to_delete_node, struct TaskStruct, node)->is_dynamic_stack) {
+                    Memory_free(container_of(to_delete_node, struct TaskStruct, node)->stack);
+                }
 #endif
-            Task_deleteTaskStruct(container_of(to_delete_node, struct TaskStruct, node));
-
-        } while (0);
-
-        Task_resumeScheduling();
+                Task_deleteTaskStruct(container_of(to_delete_node, struct TaskStruct, node));
+            }
+        });
 
         if (TaskList_hasTask(REALTIME_TASK) || TaskList_hasTask(COMMON_TASK)) {
             Task_yield();
@@ -282,7 +252,12 @@ int Task_exec() {
     };
     if (Task_create(kernelIdleTask, NULL, &idle_task_attr)) {
         /* 屏蔽中断 */
-        Port_disableInterrupt();
+        uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
+        __asm {
+            msr basepri, new_basepri
+            dsb
+            isb
+        }
 
         /* 配置SysTick及PendSV优先级 */
         SHPR3_Reg |= SHPR3_PENDSV_Priority;
@@ -366,10 +341,7 @@ void TaskReturnHandler() {
 
 /* 是否需要切换任务 */
 bool Task_needSwitch() {
-    if ((scheduling_suspended == 0U) && (current_task->sched_method == SCHED_RR)) {
-        return true;
-    }
-    return false;
+    return current_task->sched_method == SCHED_RR;
 }
 
 /* 切换下一个任务 */

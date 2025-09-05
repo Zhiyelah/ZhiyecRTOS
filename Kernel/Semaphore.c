@@ -25,9 +25,14 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem,
 
     Tick_t current_tick = Tick_currentTicks();
 
-    Task_suspendScheduling();
-
+    Task_beginAtomic();
     --(sem->state);
+    if (sem->state >= 0) {
+        Task_endAtomic();
+        return true;
+    }
+    Task_endAtomic();
+
     /* 没有信号量, 进入阻塞 */
     while (sem->state < 0) {
 
@@ -37,9 +42,7 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem,
             if (timeout > 0) {
                 if (!Tick_after(Tick_currentTicks(),
                                 current_tick + 1)) {
-                    Task_resumeScheduling();
                     Task_yield();
-                    Task_suspendScheduling();
                     continue;
                 }
 
@@ -49,30 +52,23 @@ static bool Semaphore_acquireHelper(struct Semaphore *const sem,
             }
 
             if (timeout == 0) {
-                ++(sem->state);
-                Task_resumeScheduling();
                 return false;
             }
 
             continue;
         }
 
-        extern const struct TaskStruct *const volatile current_task;
-        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+        Task_atomic({
+            extern const struct TaskStruct *const volatile current_task;
+            struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
-        if (front_node == NULL) {
-            Task_resumeScheduling();
-            return false;
-        }
+            if (front_node != NULL) {
+                QueueList_push(sem->tasks_waiting_to_acquire, front_node);
+            }
+        });
 
-        QueueList_push(sem->tasks_waiting_to_acquire, front_node);
-
-        Task_resumeScheduling();
         Task_yield();
-        Task_suspendScheduling();
     }
-
-    Task_resumeScheduling();
 
     return true;
 }
@@ -89,19 +85,20 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, const Tick_t timeout) {
 
 /* 释放信号量 */
 void Semaphore_release(struct Semaphore *const sem) {
-    Task_suspendScheduling();
-    ++(sem->state);
+    Task_atomic({
+        ++(sem->state);
 
-    if (sem->state <= 0) {
+        if (sem->state <= 0) {
 
-        if (!QueueList_isEmpty(sem->tasks_waiting_to_acquire)) {
-            /* 唤醒一个等待获得信号量的任务 */
-            struct SListHead *const node = QueueList_front(sem->tasks_waiting_to_acquire);
-            QueueList_pop(sem->tasks_waiting_to_acquire);
+            if (!QueueList_isEmpty(sem->tasks_waiting_to_acquire)) {
+                /* 唤醒一个等待获得信号量的任务 */
+                struct SListHead *const node = QueueList_front(sem->tasks_waiting_to_acquire);
+                QueueList_pop(sem->tasks_waiting_to_acquire);
 
-            TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+                TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+            }
         }
-    }
+    });
 
-    Task_resumeScheduling();
+    Task_yield();
 }

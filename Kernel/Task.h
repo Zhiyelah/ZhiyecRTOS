@@ -138,19 +138,22 @@ size_t Task_getCount(void);
     }
 
 /**
- * @brief 判断当前环境是否在任务里
- * @return 如果当前在任务里则返回true, 否则返回false
+ * @brief 开始原子操作
  */
-#define Task_isInTask() Port_isUsingPSP()
+#define Task_beginAtomic() Port_disableInterrupt()
 
 /**
- * @brief 暂停调度
+ * @brief 结束原子操作
  */
-void Task_suspendScheduling(void);
+#define Task_endAtomic() Port_enableInterrupt()
 
 /**
- * @brief 恢复调度
+ * @brief 原子操作块
  */
-void Task_resumeScheduling(void);
+#define Task_atomic(code_block)        \
+    do {                               \
+        Task_beginAtomic();            \
+        {code_block} Task_endAtomic(); \
+    } while (0)
 
 #endif /* _Task_h */

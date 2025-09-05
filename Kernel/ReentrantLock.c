@@ -6,7 +6,9 @@ void ReentrantLock_init(struct ReentrantLock *const lock) {
 }
 
 void ReentrantLock_lock(struct ReentrantLock *const lock) {
-    Mutex_lock(&(lock->mutex));
+    if (lock->state == 0) {
+        Mutex_lock(&(lock->mutex));
+    }
 
     ++(lock->state);
 }

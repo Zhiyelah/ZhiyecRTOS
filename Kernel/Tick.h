@@ -7,33 +7,32 @@
 #ifndef _Tick_h
 #define _Tick_h
 
+#include "Config.h"
 #include "Defines.h"
 #include <stdbool.h>
-#include <stdint.h>
+
+#define SYSTICK_RATE_HZ (CONFIG_SYSTICK_RATE_HZ)
+
+extern volatile Tick_t kernel_ticks;
 
 /**
  * @brief 获取当前ticks
  */
-Tick_t Tick_currentTicks(void);
+#define Tick_currentTicks() ((Tick_t)kernel_ticks)
 
 /**
  * @brief 毫秒转ticks
  */
-Tick_t Tick_fromMsec(const unsigned int ms);
+#define Tick_fromMsec(ms) ((Tick_t)(((ms) * SYSTICK_RATE_HZ + (1000 - 1)) / 1000))
 
 /**
  * @brief ticks转毫秒
  */
-unsigned int Tick_toMsec(const Tick_t ticks);
+#define Tick_toMsec(ticks) ((unsigned int)(((ticks) * 1000UL + (SYSTICK_RATE_HZ - 1)) / SYSTICK_RATE_HZ))
 
 /**
  * @brief 检测是否超时, 溢出处理
  */
-bool Tick_after(const Tick_t current_ticks, const Tick_t target_ticks);
-
-/**
- * 增加tick, 内核调用
- */
-void kernel_Tick_inc(void);
+#define Tick_after(current_ticks, target_ticks) ((bool)((STick_t)((target_ticks) - (current_ticks)) < 0))
 
 #endif /* _Tick_h */

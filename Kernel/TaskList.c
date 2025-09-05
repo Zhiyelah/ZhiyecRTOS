@@ -31,6 +31,17 @@ void TaskList_append(const enum TaskType type, struct SListHead *const node) {
     QueueList_push(task_list[type], node);
 }
 
+void TaskList_insertFront(const enum TaskType type, struct SListHead *const node) {
+    struct QueueList *const list = &(task_list[type]);
+
+    node->next = list->head.next;
+    list->head.next = node;
+
+    if (QueueList_isEmpty(*list)) {
+        list->tail = node;
+    }
+}
+
 /* 将列表的头节点移除并返回它 */
 struct SListHead *TaskList_removeFront(const enum TaskType type) {
     struct QueueList *const list = &(task_list[type]);

@@ -46,29 +46,54 @@
 /**
  * @brief 禁用中断
  */
-static __forceinline void Port_disableInterrupt() {
+static __forceinline inline void Port_disableInterrupt() {
+    extern volatile int interrupt_disabled_nesting;
+
     uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
     __asm {
         msr basepri, new_basepri
         dsb
         isb
     }
+
+    ++interrupt_disabled_nesting;
+}
+
+/**
+ * @brief 禁用中断
+ * @note 中断安全的版本
+ */
+static __forceinline inline uint32_t Port_disableInterruptFromISR() {
+    uint32_t prev_basepri;
+    __asm {
+        mrs prev_basepri, basepri
+    }
+    Port_disableInterrupt();
+    return prev_basepri;
+}
+
+/**
+ * @brief 恢复中断
+ * @note 中断安全的版本
+ */
+static __forceinline inline void Port_enableInterruptFromISR(uint32_t prev_basepri) {
+    extern volatile int interrupt_disabled_nesting;
+
+    --interrupt_disabled_nesting;
+
+    if (interrupt_disabled_nesting == 0) {
+        __asm {
+            msr basepri, prev_basepri
+        }
+    }
 }
 
 /**
  * @brief 恢复中断
  */
-static __forceinline void Port_enableInterrupt() {
-    __asm {
-        msr basepri, #0
-    }
+static __forceinline inline void Port_enableInterrupt() {
+    Port_enableInterruptFromISR(0U);
 }
-
-/**
- * @brief 判断当前堆栈指针是否为PSP
- * @return 如果当前堆栈指针为PSP则返回true, 否则返回false
- */
-bool Port_isUsingPSP(void);
 
 /**
  * @brief 堆栈初始化接口

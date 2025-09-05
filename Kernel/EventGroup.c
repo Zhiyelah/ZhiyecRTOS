@@ -2,8 +2,6 @@
 #include "Defines.h"
 #include "TaskList.h"
 
-#define EventGroup_isTriggered(event_group) (event_group->events == 0U)
-
 /* 初始化事件组 */
 void EventGroup_init(struct EventGroup *const event_group,
                      const enum EventType events, const enum EventTrigLogic tri_logic) {
@@ -20,37 +18,36 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
         return false;
     }
 
-    Task_suspendScheduling();
-    ++(event_group->tasks_count);
-    Task_resumeScheduling();
+    Task_atomic({
+        ++(event_group->tasks_count);
+    });
 
-    while (!EventGroup_isTriggered(event_group)) {
-        Task_suspendScheduling();
+    while (true) {
+        Task_beginAtomic();
+        /* 表示事件被触发 */
+        if (event_group->events == 0U) {
+            Task_endAtomic();
+            break;
+        }
 
         extern const struct TaskStruct *const volatile current_task;
         struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
-        if (front_node == NULL) {
-            Task_resumeScheduling();
-            return false;
+        if (front_node) {
+            StackList_push(event_group->tasks_waiting_triggered, front_node);
         }
 
-        StackList_push(event_group->tasks_waiting_triggered, front_node);
-
-        Task_resumeScheduling();
-
+        Task_endAtomic();
         Task_yield();
     }
 
-    Task_suspendScheduling();
+    Task_atomic({
+        --(event_group->tasks_count);
 
-    --(event_group->tasks_count);
-
-    if (event_group->tasks_count == 0U) {
-        event_group->events = event_group->reset_events;
-    }
-
-    Task_resumeScheduling();
+        if (event_group->tasks_count == 0U) {
+            event_group->events = event_group->reset_events;
+        }
+    });
 
     return true;
 }
@@ -65,20 +62,18 @@ void EventGroup_trigger(struct EventGroup *const event_group, const enum EventTy
         return;
     }
 
-    Task_suspendScheduling();
+    Task_atomic({
+        event_group->events &= ~events;
 
-    event_group->events &= ~events;
+        if ((event_group->tri_logic == EVENT_TRIG_ANY) ||
+            (event_group->events == (enum EventType)0U)) {
+            event_group->events = (enum EventType)0U;
+            while (!StackList_isEmpty(event_group->tasks_waiting_triggered)) {
+                struct SListHead *const node = StackList_front(event_group->tasks_waiting_triggered);
+                StackList_pop(event_group->tasks_waiting_triggered);
 
-    if ((event_group->tri_logic == EVENT_TRIG_ANY) ||
-        (event_group->events == (enum EventType)0U)) {
-        event_group->events = (enum EventType)0U;
-        while (!StackList_isEmpty(event_group->tasks_waiting_triggered)) {
-            struct SListHead *const node = StackList_front(event_group->tasks_waiting_triggered);
-            StackList_pop(event_group->tasks_waiting_triggered);
-
-            TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+                TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+            }
         }
-    }
-
-    Task_resumeScheduling();
+    });
 }
