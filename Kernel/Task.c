@@ -14,10 +14,11 @@
 
 #if (SYSTICK_LOAD_REG_VALUE > 0xFFFFFFul)
 #error "the value "CONFIG_SYSTICK_RATE_HZ" in file Config.h is too small."
-#endif
+#endif /* SYSTICK_LOAD_REG_VALUE overflow */
 
 /* 用于管理当前任务 */
 static size_t task_count = 0U;
+static volatile int task_suspended_count = 0;
 struct TaskStruct *volatile current_task = NULL;
 
 /* 用于管理空闲任务 */
@@ -29,7 +30,7 @@ static struct TaskStruct *kernel_idle_task = NULL;
 #else
 static struct TaskStruct task_structures[TASK_MAX_NUM];
 static size_t task_structures_pos = 0U;
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 
 /* 阻塞任务列表 */
 static struct StackList blocked_task_list;
@@ -44,6 +45,7 @@ static void Task_deleteTaskStruct(struct TaskStruct *const task);
 
 /* 结束 */
 
+/* 创建任务 */
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr) {
     if (fn == NULL) {
         return false;
@@ -62,7 +64,7 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
     if ((attr == NULL) || (attr->stack == NULL)) {
         return false;
     }
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 
     Stack_t *stack = attr->stack;
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
@@ -78,7 +80,7 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
 
         is_dynamic_stack = true;
     }
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 
     Stack_t *top_of_stack = &stack[attr->stack_size - (Stack_t)1U];
 
@@ -98,13 +100,13 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         if (is_dynamic_stack) {
             Memory_free(stack);
         }
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
         return false;
     }
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     task->is_dynamic_stack = is_dynamic_stack;
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
     task->type = attr->type;
 
     /* 实时任务才支持更改调度 */
@@ -176,6 +178,7 @@ static void Task_sleepHelper(const Tick_t resume_time) {
     Task_yield();
 }
 
+/* 任务睡眠 */
 void Task_sleep(const Tick_t ticks) {
     if (ticks > 0U) {
         Task_sleepHelper(Tick_currentTicks() + ticks);
@@ -184,6 +187,7 @@ void Task_sleep(const Tick_t ticks) {
     }
 }
 
+/* 任务周期睡眠 */
 void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval) {
     const Tick_t resume_time = (*prev_wake_time) + interval;
 
@@ -195,6 +199,7 @@ void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval) {
     *prev_wake_time = resume_time;
 }
 
+/* 任务删除自身 */
 void Task_deleteSelf() {
     Task_atomic({
         struct SListHead *const front_node = TaskList_removeFront(current_task->type);
@@ -208,8 +213,28 @@ void Task_deleteSelf() {
     Task_yield();
 }
 
+/* 获取任务数量 */
 size_t Task_getCount() {
     return task_count;
+}
+
+/* 暂停所有任务 */
+void Task_suspendAll() {
+    Task_atomic({
+        ++task_suspended_count;
+    });
+}
+
+/* 恢复所有任务 */
+void Task_resumeAll() {
+    Task_atomic({
+        --task_suspended_count;
+    });
+}
+
+/* 是否需要切换任务 */
+bool Task_needSwitch() {
+    return (task_suspended_count == 0) && (current_task->sched_method == SCHED_RR);
 }
 
 #define KERNEL_IDLE_TASK_STACK_SIZE 64
@@ -221,7 +246,7 @@ static void kernelIdleTask(void *arg) {
     for (;;) {
 #ifdef Hook_idleTaskRunning
         Hook_idleTaskRunning();
-#endif
+#endif /* Hook_idleTaskRunning */
 
         Task_atomic({
             if (!StackList_isEmpty(to_delete_task_list)) {
@@ -230,13 +255,13 @@ static void kernelIdleTask(void *arg) {
 
 #ifdef Hook_taskDeletion
                 Hook_taskDeletion(container_of(to_delete_node, struct TaskStruct, node));
-#endif
+#endif /* Hook_taskDeletion */
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
                 if (container_of(to_delete_node, struct TaskStruct, node)->is_dynamic_stack) {
                     Memory_free(container_of(to_delete_node, struct TaskStruct, node)->stack);
                 }
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
                 Task_deleteTaskStruct(container_of(to_delete_node, struct TaskStruct, node));
             }
         });
@@ -247,6 +272,7 @@ static void kernelIdleTask(void *arg) {
     }
 }
 
+/* 开始执行任务, 调度器初始化配置 */
 int Task_exec() {
     /* 尝试创建空闲任务 */
     const struct TaskAttribute idle_task_attr = {
@@ -314,7 +340,7 @@ static struct TaskStruct *Task_newTaskStruct(Stack_t *const stack, Stack_t *cons
     struct TaskStruct *const new_task = &task_structures[task_structures_pos];
     ++task_structures_pos;
     *new_task = task;
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 
     return new_task;
 }
@@ -330,7 +356,7 @@ static void Task_deleteTaskStruct(struct TaskStruct *const task) {
             break;
         }
     }
-#endif
+#endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 }
 
 /* 外部调用接口 */
@@ -343,18 +369,11 @@ void TaskReturnHandler() {
     }
 }
 
-/* 是否需要切换任务 */
-bool Task_needSwitch() {
-    return current_task->sched_method == SCHED_RR;
-}
-
 /* 切换下一个任务 */
 void Task_switchNextTask() {
     /* 检查阻塞列表任务是否超时 */
     if ((!StackList_isEmpty(blocked_task_list)) &&
-        Tick_after(Tick_currentTicks(),
-                   container_of(StackList_front(blocked_task_list), struct TaskStruct, node)
-                       ->resume_time)) {
+        Tick_after(Tick_currentTicks(), container_of(StackList_front(blocked_task_list), struct TaskStruct, node)->resume_time)) {
         struct TaskStruct *const timeout_task = container_of(StackList_front(blocked_task_list),
                                                              struct TaskStruct, node);
         StackList_pop(blocked_task_list);

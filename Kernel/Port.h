@@ -59,6 +59,7 @@ static FORCEINLINE void Port_disableInterrupt() {
 
 /**
  * @brief 禁用中断
+ * @return 禁用前的中断屏蔽优先级
  * @note 中断安全的版本
  */
 static FORCEINLINE uint32_t Port_disableInterruptFromISR() {
@@ -72,6 +73,7 @@ static FORCEINLINE uint32_t Port_disableInterruptFromISR() {
 
 /**
  * @brief 恢复中断
+ * @param prev_basepri 禁用前的中断屏蔽优先级
  * @note 中断安全的版本
  */
 static FORCEINLINE void Port_enableInterruptFromISR(uint32_t prev_basepri) {

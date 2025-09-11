@@ -39,14 +39,14 @@ struct TaskAttribute {
      *      COMMON_TASK,
      *      REALTIME_TASK
      */
-    const enum TaskType type;
+    enum TaskType type;
 
     /**
      * 调度方法, 仅对实时任务有效, 可以是下列的其中一个:
      *      SCHED_RR,
      *      SCHED_FIFO
      */
-    const enum SchedMethod sched_method;
+    enum SchedMethod sched_method;
 
     /* 堆栈指针(在开启动态内存分配时可选择为空) */
     Stack_t *stack;
@@ -128,14 +128,30 @@ void Task_deleteSelf(void);
 size_t Task_getCount(void);
 
 /**
+ * @brief 暂停所有任务
+ */
+void Task_suspendAll(void);
+
+/**
+ * @brief 恢复所有任务
+ */
+void Task_resumeAll(void);
+
+/**
+ * @brief 是否需要切换任务
+ * @return true表示需要切换任务, 否则不需要
+ */
+bool Task_needSwitch(void);
+
+/**
  * @brief 让出CPU
  */
 #define Task_yield()                         \
-    {                                        \
+    do {                                     \
         Interrupt_CTRL_Reg = PendSV_SET_Bit; \
         __dsb(0xFu);                         \
         __isb(0xFu);                         \
-    }
+    } while (0)
 
 /**
  * @brief 开始原子操作

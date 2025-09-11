@@ -1,5 +1,6 @@
 #include "Printf.h"
 #include "Config.h"
+#include "Mutex.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -8,15 +9,19 @@
 #endif
 
 static void (*printf_output)(char) = NULL;
+static struct Mutex print_lock;
 
 void Printf_setOutput(void (*output)(char)) {
     printf_output = output;
+    Mutex_init(&print_lock);
 }
 
 void Printf(const char *format, ...) {
     if (printf_output == NULL) {
         return;
     }
+
+    Mutex_lock(&print_lock);
 
     va_list args;
     va_start(args, format);
@@ -49,6 +54,8 @@ void Printf(const char *format, ...) {
     for (size_t i = 0; string[i] != '\0'; ++i) {
         printf_output(string[i]);
     }
+
+    Mutex_unlock(&print_lock);
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     Memory_free(string);

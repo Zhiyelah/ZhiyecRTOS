@@ -24,6 +24,8 @@ struct MsgQueue {
     struct StackList tasks_waiting_to_send;
     /* 等待接收消息的任务 */
     struct StackList tasks_waiting_to_receive;
+    /* 等待接收消息的任务数 */
+    size_t task_count;
 
     /* 队头指针（出队位置） */
     size_t queue_head;

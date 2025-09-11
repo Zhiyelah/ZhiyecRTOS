@@ -44,7 +44,7 @@ void Semaphore_acquire(struct Semaphore *const sem);
  * @param timeout 超时时间
  * @return 是否成功获得信号量
  */
-bool Semaphore_tryAcquire(struct Semaphore *const sem, const Tick_t timeout);
+bool Semaphore_tryAcquire(struct Semaphore *const sem, Tick_t timeout);
 
 /**
  * @brief 释放信号量

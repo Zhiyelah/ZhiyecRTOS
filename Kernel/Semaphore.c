@@ -17,70 +17,68 @@ void Semaphore_initCounting(struct Semaphore *const sem, const unsigned int coun
 }
 
 /* 获得信号量 */
-static bool Semaphore_acquireHelper(struct Semaphore *const sem,
-                                    const bool has_timeout, Tick_t timeout) {
+void Semaphore_acquire(struct Semaphore *const sem) {
+    if (sem == NULL) {
+        return;
+    }
+
+    bool is_suspended = false;
+
+    Task_atomic({
+        --(sem->state);
+
+        /* 没有信号量, 进入阻塞 */
+        if (sem->state < 0) {
+            extern const struct TaskStruct *const volatile current_task;
+            struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+
+            if (front_node) {
+                QueueList_push(sem->tasks_waiting_to_acquire, front_node);
+                is_suspended = true;
+            }
+        }
+    });
+
+    if (is_suspended) {
+        Task_yield();
+    }
+}
+
+/* 尝试获得信号量, 超时后返回 */
+bool Semaphore_tryAcquire(struct Semaphore *const sem, Tick_t timeout) {
     if (sem == NULL) {
         return false;
     }
 
     Tick_t current_tick = Tick_currentTicks();
 
-    Task_beginAtomic();
-    --(sem->state);
-    if (sem->state >= 0) {
-        Task_endAtomic();
-        return true;
-    }
-    Task_endAtomic();
+    Task_atomic({
+        --(sem->state);
+    });
 
-    /* 没有信号量, 进入阻塞 */
+    /* 超时处理 */
     while (sem->state < 0) {
 
-        /* 超时处理 */
-        if (has_timeout) {
-
-            if (timeout > 0) {
-                if (!Tick_after(Tick_currentTicks(),
-                                current_tick + 1)) {
-                    Task_yield();
-                    continue;
-                }
-
-                current_tick = Tick_currentTicks();
-
-                --timeout;
+        if (timeout > 0) {
+            if (!Tick_after(Tick_currentTicks(),
+                            current_tick + 1)) {
+                Task_yield();
+                continue;
             }
 
-            if (timeout == 0) {
-                return false;
-            }
+            current_tick = Tick_currentTicks();
 
-            continue;
+            --timeout;
         }
 
-        Task_atomic({
-            extern const struct TaskStruct *const volatile current_task;
-            struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+        if (timeout == 0) {
+            return false;
+        }
 
-            if (front_node != NULL) {
-                QueueList_push(sem->tasks_waiting_to_acquire, front_node);
-            }
-        });
-
-        Task_yield();
+        continue;
     }
 
     return true;
-}
-
-/* 获得信号量 */
-void Semaphore_acquire(struct Semaphore *const sem) {
-    (void)Semaphore_acquireHelper(sem, false, 0);
-}
-
-/* 尝试获得信号量, 超时后返回 */
-bool Semaphore_tryAcquire(struct Semaphore *const sem, const Tick_t timeout) {
-    return Semaphore_acquireHelper(sem, true, timeout);
 }
 
 /* 释放信号量 */
@@ -100,5 +98,7 @@ void Semaphore_release(struct Semaphore *const sem) {
         }
     });
 
-    Task_yield();
+    if (Task_needSwitch()) {
+        Task_yield();
+    }
 }

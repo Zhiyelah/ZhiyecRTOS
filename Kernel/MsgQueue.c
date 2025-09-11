@@ -81,9 +81,9 @@ bool MsgQueue_sendFromISR(struct MsgQueue *const msg_queue, const void *const da
         return false;
     }
 
-    Task_atomic({
-        MsgQueue_sendHelper(msg_queue, data);
-    });
+    uint32_t prev_basepri = Port_disableInterruptFromISR();
+    MsgQueue_sendHelper(msg_queue, data);
+    Port_enableInterruptFromISR(prev_basepri);
 
     return true;
 }
@@ -96,6 +96,10 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
     }
 
     Tick_t current_tick = Tick_currentTicks();
+
+    Task_atomic({
+        ++(msg_queue->task_count);
+    });
 
     while (true) {
         Task_beginAtomic();
@@ -122,6 +126,9 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
             }
 
             if (timeout == 0) {
+                Task_atomic({
+                    --(msg_queue->task_count);
+                });
                 return false;
             }
 
@@ -140,13 +147,15 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
     }
 
     Task_atomic({
+        --(msg_queue->task_count);
+
         /* 从消息队列中读取消息 */
         const unsigned char *const reader = (unsigned char *)(msg_queue->buffer) + (msg_queue->type_size * msg_queue->queue_head);
         for (size_t i = 0; i < msg_queue->type_size; ++i) {
             *(((unsigned char *)data) + i) = *(reader + i);
         }
 
-        if (StackList_isEmpty(msg_queue->tasks_waiting_to_receive)) {
+        if (msg_queue->task_count == 0U) {
             msg_queue->queue_head = (msg_queue->queue_head + 1) % msg_queue->buffer_size;
             --(msg_queue->queue_count);
 
@@ -160,7 +169,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
         }
     });
 
-    if (!StackList_isEmpty(msg_queue->tasks_waiting_to_receive)) {
+    if (msg_queue->task_count != 0U) {
         Task_yield();
     }
 
