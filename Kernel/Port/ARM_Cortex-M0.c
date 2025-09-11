@@ -3,8 +3,8 @@
 #include "Hook.h"
 
 #define SysTick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
-#define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
+#define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
 #define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
 
 /* 初始化任务栈接口 */
@@ -76,7 +76,6 @@ void SysTick_Handler_Port() {
 
     ++kernel_ticks;
 
-    extern bool Task_needSwitch();
     if (Task_needSwitch()) {
         Interrupt_CTRL_Reg = PendSV_SET_Bit;
     }
