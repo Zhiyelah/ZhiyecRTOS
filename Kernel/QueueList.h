@@ -20,7 +20,7 @@ struct QueueList {
 #define QueueList_push(queue_list, node)             \
     do {                                             \
         (node)->next = NULL;                         \
-        (queue_list).tail->next = node;              \
+        (queue_list).tail->next = (node);            \
         (queue_list).tail = (queue_list).tail->next; \
     } while (0)
 
