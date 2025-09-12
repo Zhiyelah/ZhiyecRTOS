@@ -56,7 +56,7 @@ static void Console_handleInputBuffer(void) {
     }
 
     /* 查找并执行对应的命令 */
-    for (uint8_t i = 0; i < command_count; i++) {
+    for (size_t i = 0; i < command_count; i++) {
         if (strcmp(argv[0], commands[i]->name) == 0) {
             commands[i]->handler(argc, argv);
             return;
@@ -114,7 +114,7 @@ void Console_registerCommand(const struct ConsoleCommand *const cmd) {
 /* 帮助命令 */
 static int console_builtin_cmd_help_handler(int argc, char *argv[]) {
     Console_printf("Available commands:\r\n");
-    for (uint8_t i = 0; i < command_count; i++) {
+    for (size_t i = 0; i < command_count; i++) {
         Console_printf("  %-10s %s\r\n", commands[i]->name, commands[i]->description);
     }
     return 0;
