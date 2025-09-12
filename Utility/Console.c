@@ -2,6 +2,16 @@
 #include <stdint.h>
 #include <string.h>
 
+/* 控制台配置参数 */
+#define COMMAND_LIST_SIZE 10     // 已注册命令列表大小
+#define INPUT_BUFFER_SIZE 128    // 输入缓冲区大小
+#define COMMAND_MAX_ARGS 8       // 最大参数数量
+#define PROMPT_STRING "zhiyec> " // 命令提示符
+
+#include "Printf.h"
+/* 控制台输出 */
+#define Console_printf(...) Printf(__VA_ARGS__)
+
 /* 输入缓存区 */
 static char input_buffer[INPUT_BUFFER_SIZE];
 static size_t input_len = 0U;
@@ -22,7 +32,7 @@ static const struct ConsoleCommand console_builtin_cmd_version = {
 };
 
 /* 已注册命令列表 */
-static const struct ConsoleCommand *commands[10] = {
+static const struct ConsoleCommand *commands[COMMAND_LIST_SIZE] = {
     &console_builtin_cmd_help,
     &console_builtin_cmd_version,
 };
@@ -53,15 +63,15 @@ static void Console_handleInputBuffer(void) {
         }
     }
 
-    Printf("Unknown command: %s\r\n", argv[0]);
-    Printf("Type 'help' for command list\r\n");
+    Console_printf("Unknown command: %s\r\n", argv[0]);
+    Console_printf("Type 'help' for command list\r\n");
 }
 
 /* 处理输入 */
 void Console_process(char ch) {
     if (ch == '\r') { /* 回车 */
         /* 回显换行 */
-        Printf("\r\n");
+        Console_printf("\r\n");
 
         /* 处理输入缓存区 */
         input_buffer[input_len] = '\0';
@@ -72,18 +82,18 @@ void Console_process(char ch) {
         memset(input_buffer, 0, INPUT_BUFFER_SIZE);
 
         /* 打印命令提示符 */
-        Printf(PROMPT_STRING);
+        Console_printf(PROMPT_STRING);
 
     } else if (ch == '\b' && input_len > 0) { /* 退格 */
         /* 回退缓存区 */
         input_buffer[--input_len] = '\0';
 
         /* 清除显示的字符 */
-        Printf("\b \b");
+        Console_printf("\b \b");
 
     } else if (input_len < INPUT_BUFFER_SIZE - 1) { /* 普通字符 */
         /* 回显输入字符 */
-        Printf("%c", ch);
+        Console_printf("%c", ch);
 
         /* 加入缓存区 */
         input_buffer[input_len++] = ch;
@@ -92,10 +102,10 @@ void Console_process(char ch) {
 
 /* 注册命令 */
 void Console_registerCommand(const struct ConsoleCommand *const cmd) {
-    if (command_count < (sizeof(commands) / sizeof(commands[0]) - 1)) {
+    if (command_count < COMMAND_LIST_SIZE) {
         commands[command_count++] = cmd;
     } else {
-        Printf("Command list full, cannot register %s\r\n", cmd->name);
+        Console_printf("Command list full, cannot register %s\r\n", cmd->name);
     }
 }
 
@@ -103,15 +113,15 @@ void Console_registerCommand(const struct ConsoleCommand *const cmd) {
 
 /* 帮助命令 */
 static int console_builtin_cmd_help_handler(int argc, char *argv[]) {
-    Printf("Available commands:\r\n");
+    Console_printf("Available commands:\r\n");
     for (uint8_t i = 0; i < command_count; i++) {
-        Printf("  %-10s %s\r\n", commands[i]->name, commands[i]->description);
+        Console_printf("  %-10s %s\r\n", commands[i]->name, commands[i]->description);
     }
     return 0;
 }
 
 /* 版本命令 */
 static int console_builtin_cmd_version_handler(int argc, char *argv[]) {
-    Printf("ZhiyecRTOS Console v1.2\r\n");
+    Console_printf("ZhiyecRTOS Console v1.2\r\n");
     return 0;
 }

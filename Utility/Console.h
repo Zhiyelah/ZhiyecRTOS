@@ -1,12 +1,12 @@
+/**
+ * @file Console.h
+ * @author Zhiyelah
+ * @brief 控制台支持
+ * @note 可通过终端模式下的串口工具与MCU交互
+ */
+
 #ifndef _Console_h
 #define _Console_h
-
-#include "Printf.h"
-
-/* 控制台配置参数 */
-#define INPUT_BUFFER_SIZE 128    // 输入缓冲区大小
-#define COMMAND_MAX_ARGS 8       // 最大参数数量
-#define PROMPT_STRING "zhiyec> " // 命令提示符
 
 struct ConsoleCommand {
     const char *name;                       // 命令名称
