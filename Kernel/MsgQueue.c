@@ -2,6 +2,7 @@
 #include "Defines.h"
 #include "StackList.h"
 #include "TaskList.h"
+#include <string.h>
 
 extern const struct TaskStruct *const volatile current_task;
 
@@ -27,9 +28,8 @@ void MsgQueue_init(struct MsgQueue *const msg_queue,
 static inline void MsgQueue_sendHelper(struct MsgQueue *const msg_queue, const void *const data) {
     /* 往消息队列添加消息 */
     unsigned char *const writer = (unsigned char *)(msg_queue->buffer) + (msg_queue->type_size * msg_queue->queue_tail);
-    for (size_t i = 0; i < msg_queue->type_size; ++i) {
-        *(writer + i) = *(((unsigned char *)data) + i);
-    }
+    memcpy(writer, data, msg_queue->type_size);
+
     msg_queue->queue_tail = (msg_queue->queue_tail + 1) % msg_queue->buffer_size;
     ++(msg_queue->queue_count);
 
@@ -151,9 +151,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
 
         /* 从消息队列中读取消息 */
         const unsigned char *const reader = (unsigned char *)(msg_queue->buffer) + (msg_queue->type_size * msg_queue->queue_head);
-        for (size_t i = 0; i < msg_queue->type_size; ++i) {
-            *(((unsigned char *)data) + i) = *(reader + i);
-        }
+        memcpy(data, reader, msg_queue->type_size);
 
         if (msg_queue->task_count == 0U) {
             msg_queue->queue_head = (msg_queue->queue_head + 1) % msg_queue->buffer_size;

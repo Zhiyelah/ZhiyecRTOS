@@ -37,7 +37,7 @@ struct MsgQueue {
 
 /**
  * @brief 初始化消息队列
- * @param msq_queue 消息对象
+ * @param msg_queue 消息对象
  * @param type_size 消息数据类型大小
  * @param buffer 消息缓冲区
  * @param buffer_size 缓冲区大小
@@ -47,15 +47,24 @@ void MsgQueue_init(struct MsgQueue *const msg_queue,
 
 /**
  * @brief 发送消息
- * @param msq_queue 消息对象
+ * @param msg_queue 消息对象
  * @param data 消息内容
  * @return 是否发送成功
  */
 bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data);
 
 /**
+ * @brief 发送消息
+ * @param msg_queue 消息对象
+ * @param data 消息内容
+ * @return 是否发送成功
+ * @note 中断安全的版本
+ */
+bool MsgQueue_sendFromISR(struct MsgQueue *const msg_queue, const void *const data);
+
+/**
  * @brief 接收消息
- * @param msq_queue 消息对象
+ * @param msg_queue 消息对象
  * @param data 消息存放变量
  * @return 是否接收成功
  */
@@ -63,7 +72,7 @@ void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
 
 /**
  * @brief 尝试接收消息, 超时直接返回失败
- * @param msq_queue 消息对象
+ * @param msg_queue 消息对象
  * @param data 消息存放变量
  * @param timeout 超时时间
  * @return 是否接收成功
