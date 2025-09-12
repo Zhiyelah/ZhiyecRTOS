@@ -1,4 +1,4 @@
-## Zhiye embedded (mcu) RTOS
+## Zhiye controller RTOS
 
 
 ### 一、简介
