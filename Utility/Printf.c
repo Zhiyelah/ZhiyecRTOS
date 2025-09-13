@@ -21,8 +21,6 @@ void Printf(const char *format, ...) {
         return;
     }
 
-    Mutex_lock(&print_lock);
-
     va_list args;
     va_start(args, format);
 
@@ -33,17 +31,22 @@ void Printf(const char *format, ...) {
     const size_t string_length = vsnprintf(NULL, 0U, format, args_copy) + 1;
     va_end(args_copy);
     char *string = Memory_alloc(string_length * sizeof(char));
+    if (string == NULL) {
+        return;
+    }
 #else
     char string[128];
     const size_t string_length = sizeof(string) / sizeof(string[0]);
 #endif
+
+    Mutex_lock(&print_lock);
 
     /* 格式化字符串到字符数组中 */
     const int length = vsnprintf(string, string_length, format, args);
     va_end(args);
 
     /* 字符串过长, 省略 */
-    if (length >= string_length) {
+    if ((length >= string_length) && (string_length >= 4U)) {
         size_t i = string_length - 1 - 3;
         for (; i < string_length - 1; ++i) {
             string[i] = '.';
