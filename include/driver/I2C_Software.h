@@ -7,9 +7,9 @@
 #ifndef _I2C_Sortware_h
 #define _I2C_Sortware_h
 
-#include "Time.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <utility/Time.h>
 
 /**
  *  引脚初始化

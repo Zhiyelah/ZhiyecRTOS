@@ -1,14 +1,36 @@
-#include "PIDController.h"
+#include <utility/PIDController.h>
+#include <zhiyec/Assert.h>
+
+struct PIDObject {
+    float kp;
+    float ki;
+    float kd;
+    /* PID输出 */
+    volatile float pid_output;
+    /* 上一次误差 */
+    float prev_error;
+    /* 累加误差 */
+    float sum_error;
+};
+
+static_assert(PIDObject_byte == sizeof(struct PIDObject), "size mismatch");
 
 /* 初始化PID控制器 */
-void PIDController_init(struct PIDObject *const pid,
-                        const float kp, const float ki, const float kd) {
+struct PIDObject *PIDController_init(void *const pid_mem,
+                                     const float kp, const float ki, const float kd) {
+    if (!pid_mem) {
+        return 0;
+    }
+
+    struct PIDObject *pid = (struct PIDObject *)pid_mem;
+
     pid->kp = kp;
     pid->ki = ki;
     pid->kd = kd;
     pid->pid_output = 0;
     pid->prev_error = 0;
     pid->sum_error = 0;
+    return pid;
 }
 
 /* 计算误差 */

@@ -1,22 +1,52 @@
-#include "MsgQueue.h"
-#include "Defines.h"
-#include "StackList.h"
-#include "TaskList.h"
+#include <../kernel/TaskList.h>
 #include <string.h>
+#include <zhiyec/Assert.h>
+#include <zhiyec/List.h>
+#include <zhiyec/MsgQueue.h>
 
-extern const struct TaskStruct *const volatile current_task;
+struct MsgQueue {
+    /* 数据缓冲区 */
+    void *buffer;
+    /* 缓冲区大小 */
+    size_t buffer_size;
+    /* 类型大小 */
+    size_t type_size;
+    /* 等待发送消息的任务 */
+    struct StackList tasks_waiting_to_send;
+    /* 等待接收消息的任务 */
+    struct StackList tasks_waiting_to_receive;
+    /* 等待接收消息的任务数 */
+    size_t task_count;
+
+    /* 队头指针（出队位置） */
+    size_t queue_head;
+    /* 队尾指针（入队位置） */
+    size_t queue_tail;
+    /* 当前队列元素数量 */
+    volatile size_t queue_count;
+};
+
+static_assert(MsgQueue_byte == sizeof(struct MsgQueue), "size mismatch");
 
 /* 初始化消息队列 */
-void MsgQueue_init(struct MsgQueue *const msg_queue,
-                   const size_t type_size, void *const buffer, const size_t buffer_size) {
+struct MsgQueue *MsgQueue_init(void *const msg_queue_mem,
+                               const size_t type_size, void *const buffer, const size_t buffer_size) {
+    if (!msg_queue_mem) {
+        return NULL;
+    }
+
+    struct MsgQueue *msg_queue = (struct MsgQueue *)msg_queue_mem;
+
     msg_queue->buffer = buffer;
     msg_queue->buffer_size = buffer_size;
     msg_queue->type_size = type_size;
     StackList_init(msg_queue->tasks_waiting_to_send);
     StackList_init(msg_queue->tasks_waiting_to_receive);
+    msg_queue->task_count = 0U;
     msg_queue->queue_head = 0U;
     msg_queue->queue_tail = 0U;
     msg_queue->queue_count = 0U;
+    return msg_queue;
 }
 
 /* 检查队列是否为空 */
@@ -38,7 +68,7 @@ static inline void MsgQueue_sendHelper(struct MsgQueue *const msg_queue, const v
         struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_receive);
         StackList_pop(msg_queue->tasks_waiting_to_receive);
 
-        TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+        TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
     }
 }
 
@@ -55,7 +85,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
             break;
         }
 
-        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
         if (front_node) {
             StackList_push(msg_queue->tasks_waiting_to_send, front_node);
@@ -90,12 +120,12 @@ bool MsgQueue_sendFromISR(struct MsgQueue *const msg_queue, const void *const da
 
 /* 接收消息 */
 static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const data,
-                                   const bool has_timeout, Tick_t timeout) {
+                                   const bool has_timeout, tick_t timeout) {
     if ((msg_queue == NULL) || (data == NULL)) {
         return false;
     }
 
-    Tick_t current_tick = Tick_currentTicks();
+    tick_t current_tick = Tick_currentTicks();
 
     Task_atomic({
         ++(msg_queue->task_count);
@@ -136,7 +166,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
         }
 
         Task_atomic({
-            struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+            struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
             if (front_node) {
                 StackList_push(msg_queue->tasks_waiting_to_receive, front_node);
@@ -162,7 +192,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
                 struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_send);
                 StackList_pop(msg_queue->tasks_waiting_to_send);
 
-                TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+                TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
             }
         }
     });
@@ -179,6 +209,6 @@ void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data) {
 }
 
 bool MsgQueue_tryReceive(struct MsgQueue *const msg_queue, void *const data,
-                         const Tick_t timeout) {
+                         const tick_t timeout) {
     return MsgQueue_receiveHelper(msg_queue, data, true, timeout);
 }

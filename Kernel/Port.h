@@ -7,10 +7,11 @@
 #ifndef _Port_h
 #define _Port_h
 
-#include "Config.h"
-#include "Defines.h"
+#include <Config.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zhiyec/Kernel.h>
+#include <zhiyec/Types.h>
 
 /* 内存字节对齐位 */
 #define BYTE_ALIGNMENT 8
@@ -98,7 +99,7 @@ static FORCEINLINE void Port_enableInterrupt() {
 /**
  * @brief 堆栈初始化接口
  */
-Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
+stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
 
 /**
  * @brief 任务执行接口

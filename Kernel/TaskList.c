@@ -1,7 +1,6 @@
 #include "TaskList.h"
-#include "Defines.h"
-#include "QueueList.h"
 #include <stddef.h>
+#include <zhiyec/Types.h>
 
 /**
  * head节点没有容器
@@ -68,5 +67,5 @@ struct TaskStruct *TaskList_getFrontTask(const enum TaskType type) {
         return NULL;
     }
 
-    return container_of(QueueList_front(task_list[type]), struct TaskStruct, node);
+    return Task_fromTaskNode(QueueList_front(task_list[type]));
 }

@@ -1,5 +1,5 @@
-#include "Console.h"
 #include <string.h>
+#include <utility/Console.h>
 
 /* 控制台配置参数 */
 #define COMMAND_LIST_SIZE 10     // 已注册命令列表大小
@@ -7,7 +7,7 @@
 #define COMMAND_MAX_ARGS 8       // 最大参数数量
 #define PROMPT_STRING "zhiyec> " // 命令提示符
 
-#include "Printf.h"
+#include <utility/Printf.h>
 /* 控制台输出 */
 #define Console_printf(...) Printf(__VA_ARGS__)
 

@@ -8,42 +8,24 @@
 #ifndef _MsgQueue_h
 #define _MsgQueue_h
 
-#include "StackList.h"
-#include "Tick.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <zhiyec/Tick.h>
 
-struct MsgQueue {
-    /* 数据缓冲区 */
-    void *buffer;
-    /* 缓冲区大小 */
-    size_t buffer_size;
-    /* 类型大小 */
-    size_t type_size;
-    /* 等待发送消息的任务 */
-    struct StackList tasks_waiting_to_send;
-    /* 等待接收消息的任务 */
-    struct StackList tasks_waiting_to_receive;
-    /* 等待接收消息的任务数 */
-    size_t task_count;
+struct MsgQueue;
 
-    /* 队头指针（出队位置） */
-    size_t queue_head;
-    /* 队尾指针（入队位置） */
-    size_t queue_tail;
-    /* 当前队列元素数量 */
-    volatile size_t queue_count;
-};
+#define MsgQueue_byte 36
 
 /**
  * @brief 初始化消息队列
- * @param msg_queue 消息对象
+ * @param msg_queue_mem 对象内存指针
  * @param type_size 消息数据类型大小
  * @param buffer 消息缓冲区
  * @param buffer_size 缓冲区大小
+ * @return 对象指针
  */
-void MsgQueue_init(struct MsgQueue *const msg_queue,
-                   const size_t type_size, void *const buffer, const size_t buffer_size);
+struct MsgQueue *MsgQueue_init(void *const msg_queue_mem,
+                               const size_t type_size, void *const buffer, const size_t buffer_size);
 
 /**
  * @brief 发送消息
@@ -78,6 +60,6 @@ void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
  * @return 是否接收成功
  */
 bool MsgQueue_tryReceive(struct MsgQueue *const msg_queue, void *const data,
-                         const Tick_t timeout);
+                         const tick_t timeout);
 
 #endif /* _MsgQueue_h */

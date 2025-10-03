@@ -1,19 +1,19 @@
-#include "Printf.h"
-#include "Config.h"
-#include "Mutex.h"
+#include <Config.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <utility/Printf.h>
+#include <zhiyec/Mutex.h>
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
-#include "Memory.h"
+#include <zhiyec/Memory.h>
 #endif
 
 static void (*printf_output)(char) = NULL;
-static struct Mutex print_lock;
+static struct Mutex *print_lock = (struct Mutex *)(byte[Mutex_byte]){};
 
 void Printf_setOutput(void (*output)(char)) {
     printf_output = output;
-    Mutex_init(&print_lock);
+    (void)Mutex_init(print_lock);
 }
 
 void Printf(const char *format, ...) {
@@ -39,7 +39,7 @@ void Printf(const char *format, ...) {
     const size_t string_length = sizeof(string) / sizeof(string[0]);
 #endif
 
-    Mutex_lock(&print_lock);
+    Mutex_lock(print_lock);
 
     /* 格式化字符串到字符数组中 */
     const int length = vsnprintf(string, string_length, format, args);
@@ -58,7 +58,7 @@ void Printf(const char *format, ...) {
         printf_output(string[i]);
     }
 
-    Mutex_unlock(&print_lock);
+    Mutex_unlock(print_lock);
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     Memory_free(string);

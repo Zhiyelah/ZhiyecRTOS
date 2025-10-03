@@ -8,23 +8,25 @@
 #ifndef _Mutex_h
 #define _Mutex_h
 
-#include "Semaphore.h"
-#include "Task.h"
+#include <stdbool.h>
+#include <zhiyec/Tick.h>
 
-struct Mutex {
-    /* 基于信号量 */
-    struct Semaphore sem;
-    /* 持有锁的任务 */
-    struct TaskStruct *owner;
-    /* 持有锁任务的类型 */
-    enum TaskType owner_type;
-};
+struct Mutex;
+
+#define Mutex_byte 28
 
 /**
  * @brief 初始化互斥锁
- * @param mutex 互斥锁对象
+ * @param mutex_mem 对象内存指针
+ * @return 对象指针
  */
-void Mutex_init(struct Mutex *const mutex);
+struct Mutex *Mutex_init(void *const mutex_mem);
+
+/**
+ * @brief 获取所有者
+ * @return 所有者对象指针
+ */
+struct TaskStruct *Mutex_getOwner(struct Mutex *const mutex);
 
 /**
  * @brief 获得锁
@@ -38,7 +40,7 @@ void Mutex_lock(struct Mutex *const mutex);
  * @param timeout 超时时间
  * @return 是否成功获得锁
  */
-bool Mutex_tryLock(struct Mutex *const mutex, const Tick_t timeout);
+bool Mutex_tryLock(struct Mutex *const mutex, const tick_t timeout);
 
 /**
  * @brief 释放锁

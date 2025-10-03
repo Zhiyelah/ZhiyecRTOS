@@ -4,14 +4,14 @@
  * @brief 配置文件
  */
 
-#ifndef _ZhiyembeConfig_h
-#define _ZhiyembeConfig_h
+#ifndef _Zhiyec_Config_h
+#define _Zhiyec_Config_h
 
 /* 配置Tick中断频率 */
 #define CONFIG_SYSTICK_RATE_HZ 1000
 
 /* 配置CPU时钟频率 */
-#define CONFIG_CPU_CLOCK_HZ 72000000
+#define CONFIG_CPU_CLOCK_HZ 168000000
 
 /* 配置SysTick中断入口 */
 #define CONFIG_SYSTICK_HANDLER_PORT SysTick_Handler
@@ -40,4 +40,4 @@
 /*      配置默认的任务栈大小(启用动态内存分配且未指定任务栈大小时) */
 /*   */ #define CONFIG_DEFAULT_TASK_STACK_SIZE 128
 
-#endif /* _ZhiyembeConfig_h */
+#endif /* _Zhiyec_Config_h */

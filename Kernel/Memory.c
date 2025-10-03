@@ -1,15 +1,14 @@
-#include "Memory.h"
-#include "Config.h"
-#include "Port.h"
-#include "Task.h"
+#include <../kernel/Port.h>
+#include <Config.h>
+#include <zhiyec/Memory.h>
+#include <zhiyec/Task.h>
+#include <zhiyec/Types.h>
 
 #define MEMORYPOOL_SIZE (CONFIG_MEMORYPOOL_SIZE)
 
 #if (!USE_DYNAMIC_MEMORY_ALLOCATION)
 #error please set USE_DYNAMIC_MEMORY_ALLOCATION to 1 or remove this file from your project.
 #endif
-
-typedef unsigned char byte;
 
 struct MemoryBlockInfo {
     struct MemoryBlockInfo *next_mem_block;

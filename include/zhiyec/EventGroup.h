@@ -8,7 +8,6 @@
 #ifndef _EventGroup_h
 #define _EventGroup_h
 
-#include "StackList.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -24,20 +23,13 @@ enum EventType {
     EVENT_CUSTOM = 0x08,
 };
 
-struct EventGroup {
-    /* 事件数 */
-    volatile enum EventType events;
-    /* 重置的事件数 */
-    enum EventType reset_events;
-    /* 触发逻辑 */
-    enum EventTrigLogic tri_logic;
-    /* 等待事件触发的任务 */
-    struct StackList tasks_waiting_triggered;
-};
+struct EventGroup;
+
+#define EventGroup_byte 8
 
 /**
  * @brief 初始化事件组
- * @param event_group 事件组对象
+ * @param event_group_mem 对象内存指针
  * @param events 事件类型, 可以是下列的其中一个:
  *          EVENT_INPUTDEVICE,
             EVENT_TIMER,
@@ -46,9 +38,10 @@ struct EventGroup {
  * @param tri_logic 触发逻辑, 可以是下列的其中一个:
             EVENT_TRIG_ANY,
             EVENT_TRIG_ALL
+ * @return 对象指针
  */
-void EventGroup_init(struct EventGroup *const event_group,
-                     const enum EventType events, const enum EventTrigLogic tri_logic);
+struct EventGroup *EventGroup_init(void *const event_group_mem,
+                                   const enum EventType events, const enum EventTrigLogic tri_logic);
 
 /**
  * @brief 监听事件, 当前任务进入阻塞, 直到事件触发; 监听失败立即返回

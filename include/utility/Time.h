@@ -7,9 +7,9 @@
 #ifndef _Time_h
 #define _Time_h
 
-#include "Tick.h"
+#include <zhiyec/Tick.h>
 
-typedef Tick_t Time_t;
+typedef tick_t Time_t;
 
 void Time_delayUs(const Time_t us);
 

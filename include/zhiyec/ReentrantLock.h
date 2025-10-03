@@ -8,20 +8,19 @@
 #ifndef _ReentrantLock_h
 #define _ReentrantLock_h
 
-#include "Mutex.h"
+#include <stdbool.h>
+#include <zhiyec/Tick.h>
 
-struct ReentrantLock {
-    /* 基于互斥锁 */
-    struct Mutex mutex;
-    /* 锁计数器 */
-    volatile int state;
-};
+struct ReentrantLock;
+
+#define ReentrantLock_byte 36
 
 /**
  * @brief 初始化可重入锁
- * @param lock 可重入锁对象
+ * @param lock_mem 对象内存指针
+ * @return 对象指针
  */
-void ReentrantLock_init(struct ReentrantLock *const lock);
+struct ReentrantLock *ReentrantLock_init(void *const lock_mem);
 
 /**
  * @brief 获得锁
@@ -35,7 +34,7 @@ void ReentrantLock_lock(struct ReentrantLock *const lock);
  * @param timeout 超时时间
  * @return 是否成功获得锁
  */
-bool ReentrantLock_tryLock(struct ReentrantLock *const lock, const Tick_t timeout);
+bool ReentrantLock_tryLock(struct ReentrantLock *const lock, const tick_t timeout);
 
 /**
  * @brief 释放锁

@@ -8,27 +8,20 @@
 #ifndef _PIDController_h
 #define _PIDController_h
 
-struct PIDObject {
-    float kp;
-    float ki;
-    float kd;
-    /* PID输出 */
-    volatile float pid_output;
-    /* 上一次误差 */
-    float prev_error;
-    /* 累加误差 */
-    float sum_error;
-};
+struct PIDObject;
+
+#define PIDObject_byte 24
 
 /**
  * @brief 初始化PID控制器
- * @param pid PID对象
+ * @param pid_mem 对象内存指针
  * @param kp PID比例项参数
  * @param ki PID积分项参数
  * @param kd PID微分项参数
+ * @return 对象指针
  */
-void PIDController_init(struct PIDObject *const pid,
-                        const float kp, const float ki, const float kd);
+struct PIDObject *PIDController_init(void *const pid_mem,
+                                     const float kp, const float ki, const float kd);
 
 /**
  * @brief 计算误差

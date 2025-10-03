@@ -7,14 +7,14 @@
 #ifndef _Task_h
 #define _Task_h
 
-#include "Config.h"
-#include "Defines.h"
-#include "List.h"
-#include "Port.h"
-#include "Tick.h"
+#include <../kernel/Port.h>
+#include <Config.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zhiyec/List.h>
+#include <zhiyec/Tick.h>
+#include <zhiyec/Types.h>
 
 enum TaskType {
     /* 普通任务 */
@@ -49,10 +49,10 @@ struct TaskAttribute {
     enum SchedMethod sched_method;
 
     /* 堆栈指针(在开启动态内存分配时可选择为空) */
-    Stack_t *stack;
+    stack_t *stack;
 
     /* 堆栈大小 */
-    Stack_t stack_size;
+    stack_t stack_size;
 };
 
 /**
@@ -68,24 +68,7 @@ struct TaskAttribute {
         .type = _type,                                    \
     }
 
-struct TaskStruct {
-    /* 栈顶指针(必须是结构体的第一个成员) */
-    volatile Stack_t *top_of_stack;
-    /* 堆栈指针 */
-    Stack_t *stack;
-#if (USE_DYNAMIC_MEMORY_ALLOCATION)
-    /* 是否为动态分配栈 */
-    bool is_dynamic_stack;
-#endif
-    /* 任务类型 */
-    enum TaskType type;
-    /* 调度方法 */
-    enum SchedMethod sched_method;
-    /* 任务链表 */
-    struct SListHead node;
-    /* 恢复执行的时间 */
-    Tick_t resume_time;
-};
+struct TaskStruct;
 
 /**
  * @brief 创建任务
@@ -106,7 +89,7 @@ int Task_exec(void);
  * @param ticks 阻塞时间
  * @note 当前任务进入阻塞, 并切换到下一个任务, 一段时间后恢复
  */
-void Task_sleep(const Tick_t ticks);
+void Task_sleep(const tick_t ticks);
 
 /**
  * @brief 绝对时间睡眠
@@ -114,7 +97,7 @@ void Task_sleep(const Tick_t ticks);
  * @param interval 时间间隔
  * @note 当前任务进入阻塞, 直到指定的时间点; 如果超时立即返回, 确保任务执行的周期性
  */
-void Task_sleepUntil(Tick_t *const prev_wake_time, const Tick_t interval);
+void Task_sleepUntil(tick_t *const prev_wake_time, const tick_t interval);
 
 /**
  * @brief 在任务中调用, 删除当前任务
@@ -142,6 +125,33 @@ void Task_resumeAll(void);
  * @return true表示需要切换任务, 否则不需要
  */
 bool Task_needSwitch(void);
+
+/**
+ * @brief 获取当前任务
+ * @return 当前任务指针
+ */
+struct TaskStruct *Task_currentTask(void);
+
+/**
+ * @brief 获取任务的类型
+ * @param task 任务指针
+ * @return 任务类型
+ */
+enum TaskType Task_getType(const struct TaskStruct *const task);
+
+/**
+ * @brief 设置任务的类型
+ * @param task 任务指针
+ * @param type 任务类型
+ */
+void Task_setType(struct TaskStruct *const task, const enum TaskType type);
+
+/**
+ * @brief 获取节点所在任务
+ * @param node 任务节点
+ * @return 节点所在任务
+ */
+struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node);
 
 /**
  * @brief 让出CPU

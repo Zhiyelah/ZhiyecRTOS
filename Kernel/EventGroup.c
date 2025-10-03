@@ -1,14 +1,35 @@
-#include "EventGroup.h"
-#include "Defines.h"
-#include "TaskList.h"
+#include <../kernel/TaskList.h>
+#include <zhiyec/Assert.h>
+#include <zhiyec/EventGroup.h>
+#include <zhiyec/List.h>
+
+struct EventGroup {
+    /* 事件数 */
+    volatile enum EventType events;
+    /* 重置的事件数 */
+    enum EventType reset_events;
+    /* 触发逻辑 */
+    enum EventTrigLogic tri_logic;
+    /* 等待事件触发的任务 */
+    struct StackList tasks_waiting_triggered;
+};
+
+static_assert(EventGroup_byte == sizeof(struct EventGroup), "size mismatch");
 
 /* 初始化事件组 */
-void EventGroup_init(struct EventGroup *const event_group,
-                     const enum EventType events, const enum EventTrigLogic tri_logic) {
+struct EventGroup *EventGroup_init(void *const event_group_mem,
+                                   const enum EventType events, const enum EventTrigLogic tri_logic) {
+    if (!event_group_mem) {
+        return NULL;
+    }
+
+    struct EventGroup *event_group = (struct EventGroup *)event_group_mem;
+
     event_group->events = events;
     event_group->reset_events = events;
     event_group->tri_logic = tri_logic;
     StackList_init(event_group->tasks_waiting_triggered);
+    return event_group;
 }
 
 /* 监听事件 */
@@ -25,8 +46,7 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
             break;
         }
 
-        extern const struct TaskStruct *const volatile current_task;
-        struct SListHead *const front_node = TaskList_removeFront(current_task->type);
+        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
         if (front_node) {
             StackList_push(event_group->tasks_waiting_triggered, front_node);
@@ -65,7 +85,7 @@ void EventGroup_trigger(struct EventGroup *const event_group, const enum EventTy
                 struct SListHead *const node = StackList_front(event_group->tasks_waiting_triggered);
                 StackList_pop(event_group->tasks_waiting_triggered);
 
-                TaskList_append(container_of(node, struct TaskStruct, node)->type, node);
+                TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
             }
         }
     });

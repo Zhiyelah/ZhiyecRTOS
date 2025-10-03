@@ -1,6 +1,6 @@
-#include "Port.h"
-#include "Task.h"
-#include "Hook.h"
+#include <../kernel/Port.h>
+#include <zhiyec/Task.h>
+#include <../kernel/Hook.h>
 
 #define SysTick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
@@ -8,18 +8,18 @@
 #define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
 
 /* 初始化任务栈接口 */
-Stack_t *InitTaskStack_Port(Stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
+stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
     /* xPSR寄存器 */
     *(--top_of_stack) = 0x01000000; /* 以Thumb指令模式执行(内存受限场景, Cortex-M平台要求) */
     /* PC寄存器 */
-    *(--top_of_stack) = (Stack_t)fn;
+    *(--top_of_stack) = (stack_t)fn;
     /* LR寄存器 */
     extern void TaskReturnHandler();
-    *(--top_of_stack) = (Stack_t)TaskReturnHandler;
+    *(--top_of_stack) = (stack_t)TaskReturnHandler;
     /* r12, r3, r2, r1寄存器 */
     top_of_stack -= 4;
     /* r0寄存器 */
-    *(--top_of_stack) = (Stack_t)arg;
+    *(--top_of_stack) = (stack_t)arg;
     /* r11, r10, r9, r8, r7, r6, r5, r4寄存器 */
     top_of_stack -= 8;
 
