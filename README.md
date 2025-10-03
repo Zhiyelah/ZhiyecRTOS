@@ -1,6 +1,6 @@
 
-## 介绍
-Zhiye controller RTOS 是用于嵌入式微控制器 (MCU) 的实时操作系统内核。具备轻量、低耦合、高效、可拓展的特点。目前适配了 ARM Cortex-M 架构。
+## 说明
+Zhiyecontroller RTOS 是用于嵌入式微控制器 (MCU) 的实时操作系统内核。具备轻量、低耦合、高效、可拓展的特点。适配 ARM Cortex M0-M7 架构。
 
 ### 功能
 - **任务调度**: 支持时间片轮转调度和先进先出调度，实时任务可抢占当前任务，支持任务的创建、删除、挂起、恢复
@@ -12,18 +12,17 @@ Zhiye controller RTOS 是用于嵌入式微控制器 (MCU) 的实时操作系统
 ## 使用
 1. 克隆仓库到本地
 ```bash
-git clone https://github.com/Zhiyelah/Zhiyembe.git
+git clone https://github.com/Zhiyelah/ZhiyecRTOS.git
 ```
-2. 将模块的源文件和头文件导入到 C/C++ 工程中 (Keil、EIDE、或 CLion 等)
-3. 使用 `ARM C Compiler 5` 编译, 启用 `C99 Mode`
-4. 根据目标芯片修改 `Config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
-5. 参考以下示例创建任务
+2. 将模块的源文件和头文件导入到 C/C++ 工程中
+3. 根据目标芯片修改 `Config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
+4. 参考以下示例创建任务
 
 #### 任务创建示例（使用静态内存分配）
 ```C
-#include "Task.h"
+#include <zhiyec/Task.h>
 
-Stack_t do_something_task_stack[128];
+stack_t do_something_task_stack[128];
 void doSomethingTask(void *arg) {
     /* 初始化 */
     (void)arg;
@@ -52,5 +51,6 @@ int main() {
 ```
 
 #### 特别说明
-1. 一些模块是可选的，如果禁用了 **动态内存分配** 则不需要添加 **`Memory`** 模块
-2. 任务函数 **返回** 后会自动删除该任务
+1. 支持 C99 及以上标准
+2. 一些模块是可选的，如果不开启 **动态内存分配** 则不需要添加 **`Memory`** 模块
+3. 任务函数 **返回** 后会自动删除该任务
