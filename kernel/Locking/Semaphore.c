@@ -1,9 +1,9 @@
+#include <../kernel/Atomic.h>
 #include <../kernel/TaskList.h>
 #include <stddef.h>
 #include <zhiyec/Assert.h>
 #include <zhiyec/List.h>
 #include <zhiyec/Semaphore.h>
-#include <zhiyec/Task.h>
 
 struct Semaphore {
     /* 信号量状态 */
@@ -53,7 +53,7 @@ void Semaphore_acquire(struct Semaphore *const sem) {
 
     bool is_suspended = false;
 
-    Task_atomic({
+    atomic({
         --(sem->state);
 
         /* 没有信号量, 进入阻塞 */
@@ -80,7 +80,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
 
     tick_t current_tick = Tick_currentTicks();
 
-    Task_atomic({
+    atomic({
         --(sem->state);
     });
 
@@ -111,7 +111,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
 
 /* 释放信号量 */
 void Semaphore_release(struct Semaphore *const sem) {
-    Task_atomic({
+    atomic({
         if (sem->state < sem->max_value) {
             ++(sem->state);
 

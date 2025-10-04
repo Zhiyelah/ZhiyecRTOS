@@ -1,3 +1,4 @@
+#include <../kernel/Atomic.h>
 #include <../kernel/TaskList.h>
 #include <string.h>
 #include <zhiyec/Assert.h>
@@ -79,9 +80,9 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
     }
 
     while (true) {
-        Task_beginAtomic();
+        Atomic_begin();
         if (!MsgQueue_isFull(msg_queue)) {
-            Task_endAtomic();
+            Atomic_end();
             break;
         }
 
@@ -91,11 +92,11 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
             StackList_push(msg_queue->tasks_waiting_to_send, front_node);
         }
 
-        Task_endAtomic();
+        Atomic_end();
         Task_yield();
     }
 
-    Task_atomic({
+    atomic({
         MsgQueue_sendHelper(msg_queue, data);
     });
 
@@ -127,18 +128,18 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
 
     tick_t current_tick = Tick_currentTicks();
 
-    Task_atomic({
+    atomic({
         ++(msg_queue->task_count);
     });
 
     while (true) {
-        Task_beginAtomic();
+        Atomic_begin();
         /* 有消息, 直接接收 */
         if (!MsgQueue_isEmpty(msg_queue)) {
-            Task_endAtomic();
+            Atomic_end();
             break;
         }
-        Task_endAtomic();
+        Atomic_end();
 
         /* 超时处理 */
         if (has_timeout) {
@@ -156,7 +157,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
             }
 
             if (timeout == 0) {
-                Task_atomic({
+                atomic({
                     --(msg_queue->task_count);
                 });
                 return false;
@@ -165,7 +166,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
             continue;
         }
 
-        Task_atomic({
+        atomic({
             struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
             if (front_node) {
@@ -176,7 +177,7 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
         Task_yield();
     }
 
-    Task_atomic({
+    atomic({
         --(msg_queue->task_count);
 
         /* 从消息队列中读取消息 */

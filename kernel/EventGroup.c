@@ -1,3 +1,4 @@
+#include <../kernel/Atomic.h>
 #include <../kernel/TaskList.h>
 #include <zhiyec/Assert.h>
 #include <zhiyec/EventGroup.h>
@@ -39,10 +40,10 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
     }
 
     while (true) {
-        Task_beginAtomic();
+        Atomic_begin();
         /* 表示事件被触发 */
         if (event_group->events == 0U) {
-            Task_endAtomic();
+            Atomic_end();
             break;
         }
 
@@ -52,11 +53,11 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
             StackList_push(event_group->tasks_waiting_triggered, front_node);
         }
 
-        Task_endAtomic();
+        Atomic_end();
         Task_yield();
     }
 
-    Task_atomic({
+    atomic({
         if (StackList_isEmpty(event_group->tasks_waiting_triggered)) {
             event_group->events = event_group->reset_events;
         }
@@ -75,7 +76,7 @@ void EventGroup_trigger(struct EventGroup *const event_group, const enum EventTy
         return;
     }
 
-    Task_atomic({
+    atomic({
         event_group->events &= ~events;
 
         if ((event_group->tri_logic == EVENT_TRIG_ANY) ||

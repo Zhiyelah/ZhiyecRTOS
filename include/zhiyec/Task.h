@@ -68,7 +68,24 @@ struct TaskAttribute {
         .type = _type,                                    \
     }
 
-struct TaskStruct;
+struct TaskStruct {
+    /* 栈顶指针(必须是结构体的第一个成员) */
+    volatile stack_t *top_of_stack;
+    /* 堆栈指针 */
+    stack_t *stack;
+#if (USE_DYNAMIC_MEMORY_ALLOCATION)
+    /* 是否为动态分配栈 */
+    bool is_dynamic_stack;
+#endif
+    /* 任务类型 */
+    enum TaskType type;
+    /* 调度方法 */
+    enum SchedMethod sched_method;
+    /* 任务链表 */
+    struct SListHead task_node;
+    /* 恢复执行的时间 */
+    tick_t resume_time;
+};
 
 /**
  * @brief 创建任务
@@ -137,21 +154,27 @@ struct TaskStruct *Task_currentTask(void);
  * @param task 任务指针
  * @return 任务类型
  */
-enum TaskType Task_getType(const struct TaskStruct *const task);
+static inline enum TaskType Task_getType(const struct TaskStruct *const task) {
+    return task->type;
+}
 
 /**
  * @brief 设置任务的类型
  * @param task 任务指针
  * @param type 任务类型
  */
-void Task_setType(struct TaskStruct *const task, const enum TaskType type);
+static inline void Task_setType(struct TaskStruct *const task, const enum TaskType type) {
+    task->type = type;
+}
 
 /**
  * @brief 获取节点所在任务
  * @param node 任务节点
  * @return 节点所在任务
  */
-struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node);
+static inline struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node) {
+    return container_of(node, struct TaskStruct, task_node);
+}
 
 /**
  * @brief 让出CPU
@@ -161,25 +184,6 @@ struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node);
         Interrupt_CTRL_Reg = PendSV_SET_Bit; \
         __dsb(0xFu);                         \
         __isb(0xFu);                         \
-    } while (0)
-
-/**
- * @brief 开始原子操作
- */
-#define Task_beginAtomic() Port_disableInterrupt()
-
-/**
- * @brief 结束原子操作
- */
-#define Task_endAtomic() Port_enableInterrupt()
-
-/**
- * @brief 原子操作块
- */
-#define Task_atomic(code_block)        \
-    do {                               \
-        Task_beginAtomic();            \
-        {code_block} Task_endAtomic(); \
     } while (0)
 
 #endif /* _Task_h */

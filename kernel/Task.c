@@ -1,3 +1,4 @@
+#include <../kernel/Atomic.h>
 #include <../kernel/Hook.h>
 #include <../kernel/TaskList.h>
 #include <zhiyec/List.h>
@@ -16,25 +17,6 @@
 #error "the value "CONFIG_SYSTICK_RATE_HZ" in file Config.h is too small."
 #endif /* SYSTICK_LOAD_REG_VALUE overflow */
 
-struct TaskStruct {
-    /* 栈顶指针(必须是结构体的第一个成员) */
-    volatile stack_t *top_of_stack;
-    /* 堆栈指针 */
-    stack_t *stack;
-#if (USE_DYNAMIC_MEMORY_ALLOCATION)
-    /* 是否为动态分配栈 */
-    bool is_dynamic_stack;
-#endif
-    /* 任务类型 */
-    enum TaskType type;
-    /* 调度方法 */
-    enum SchedMethod sched_method;
-    /* 任务链表 */
-    struct SListHead node;
-    /* 恢复执行的时间 */
-    tick_t resume_time;
-};
-
 /* 用于管理当前任务 */
 static size_t task_count = 0U;
 static volatile int task_suspended_count = 0;
@@ -52,21 +34,15 @@ static size_t task_structures_pos = 0U;
 #endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 
 /* 阻塞任务列表 */
-static struct StackList blocked_task_list_first;
-static struct StackList blocked_task_list_second;
-static struct StackList *blocked_task_list_curr_cycle = &blocked_task_list_first;
-static struct StackList *blocked_task_list_next_cycle = &blocked_task_list_second;
+static struct StackList *blocked_task_list_curr_cycle = &(struct StackList){};
+static struct StackList *blocked_task_list_next_cycle = &(struct StackList){};
 static bool blocked_task_list_ready_switch_next_cycle = false;
 
 /* 等待删除任务列表 */
 static struct StackList to_delete_task_list;
 
-/* 创建和删除任务对象函数提前声明 */
-
-static struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack);
-static void Task_deleteTaskStruct(struct TaskStruct *const task);
-
-/* 结束 */
+static inline struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack);
+static inline void Task_deleteTaskStruct(struct TaskStruct *const task);
 
 /* 创建任务 */
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr) {
@@ -110,13 +86,13 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
     /* 内存对齐 */
     top_of_stack = (stack_t *)(((stack_t)top_of_stack) & ~((stack_t)(BYTE_ALIGNMENT - 1)));
 
-    Task_beginAtomic();
+    Atomic_begin();
 
     struct TaskStruct *task = Task_newTaskStruct(
         stack,
         InitTaskStack_Port(top_of_stack, fn, arg));
 
-    Task_endAtomic();
+    Atomic_end();
 
     if (task == NULL) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
@@ -137,7 +113,7 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         task->sched_method = attr->sched_method;
     }
 
-    Task_atomic({
+    atomic({
         if (!TaskList_isInit()) {
             TaskList_init();
         }
@@ -145,7 +121,7 @@ bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAtt
         if (task->type == KERNEL_IDLE_TASK_TYPE) {
             kernel_idle_task = task;
         } else {
-            TaskList_append(task->type, &(task->node));
+            TaskList_append(task->type, &(task->task_node));
         }
 
         if (current_task == NULL) {
@@ -191,7 +167,7 @@ static inline void Task_insertBlockedList(struct StackList *blocked_list,
 
 /* 将当前任务阻塞 */
 static inline void Task_sleepHelper(const tick_t resume_time) {
-    Task_atomic({
+    atomic({
         struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node != NULL) {
@@ -234,7 +210,7 @@ void Task_sleepUntil(tick_t *const prev_wake_time, const tick_t interval) {
 
 /* 任务删除自身 */
 void Task_deleteSelf() {
-    Task_atomic({
+    atomic({
         struct SListHead *const front_node = TaskList_removeFront(current_task->type);
 
         if (front_node != NULL) {
@@ -253,14 +229,14 @@ size_t Task_getCount() {
 
 /* 暂停所有任务 */
 void Task_suspendAll() {
-    Task_atomic({
+    atomic({
         ++task_suspended_count;
     });
 }
 
 /* 恢复所有任务 */
 void Task_resumeAll() {
-    Task_atomic({
+    atomic({
         --task_suspended_count;
     });
 }
@@ -278,7 +254,7 @@ bool Task_needSwitch() {
         struct TaskStruct *const timeout_task = Task_fromTaskNode(StackList_front(*blocked_task_list_curr_cycle));
         StackList_pop(*blocked_task_list_curr_cycle);
 
-        TaskList_append(timeout_task->type, &(timeout_task->node));
+        TaskList_append(timeout_task->type, &(timeout_task->task_node));
     }
 
     /* 若当前tick周期的任务处理完毕, 切换到下一个tick周期的列表 */
@@ -305,21 +281,21 @@ static void kernelIdleTask(void *arg) {
         Hook_idleTaskRunning();
 #endif /* Hook_idleTaskRunning */
 
-        Task_atomic({
+        atomic({
             if (!StackList_isEmpty(to_delete_task_list)) {
                 struct SListHead *to_delete_node = StackList_front(to_delete_task_list);
                 StackList_pop(to_delete_task_list);
 
 #ifdef Hook_taskDeletion
-                Hook_taskDeletion(container_of(to_delete_node, struct TaskStruct, node));
+                Hook_taskDeletion(Task_fromTaskNode(to_delete_node));
 #endif /* Hook_taskDeletion */
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
-                if (container_of(to_delete_node, struct TaskStruct, node)->is_dynamic_stack) {
-                    Memory_free(container_of(to_delete_node, struct TaskStruct, node)->stack);
+                if (Task_fromTaskNode(to_delete_node)->is_dynamic_stack) {
+                    Memory_free(Task_fromTaskNode(to_delete_node)->stack);
                 }
 #endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
-                Task_deleteTaskStruct(container_of(to_delete_node, struct TaskStruct, node));
+                Task_deleteTaskStruct(Task_fromTaskNode(to_delete_node));
             }
         });
 
@@ -365,7 +341,7 @@ int Task_exec() {
 }
 
 /* 创建任务对象 */
-static struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack) {
+static inline struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     struct TaskStruct *new_task = Memory_alloc(sizeof(struct TaskStruct));
     if (new_task != NULL) {
@@ -403,7 +379,7 @@ static struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *cons
 }
 
 /* 删除任务对象 */
-static void Task_deleteTaskStruct(struct TaskStruct *const task) {
+static inline void Task_deleteTaskStruct(struct TaskStruct *const task) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     Memory_free(task);
 #else
@@ -420,18 +396,6 @@ static void Task_deleteTaskStruct(struct TaskStruct *const task) {
 
 struct TaskStruct *Task_currentTask() {
     return current_task;
-}
-
-enum TaskType Task_getType(const struct TaskStruct *const task) {
-    return task->type;
-}
-
-void Task_setType(struct TaskStruct *const task, const enum TaskType type) {
-    task->type = type;
-}
-
-struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node) {
-    return container_of(node, struct TaskStruct, node);
 }
 
 /* 当任务函数返回时会回到这个函数 */

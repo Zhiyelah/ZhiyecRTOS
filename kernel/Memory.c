@@ -48,7 +48,7 @@ static __forceinline void MemoryPool_init() {
 /* 使用首次适应算法分配内存 */
 void *Memory_alloc(size_t size) {
     if (memory_block_head == NULL) {
-        Task_atomic({
+        atomic({
             MemoryPool_init();
         });
     }
@@ -67,7 +67,7 @@ void *Memory_alloc(size_t size) {
         return NULL;
     }
 
-    Task_beginAtomic();
+    Atomic_begin();
 
     struct MemoryBlockInfo *current_mem_block = memory_block_head;
 
@@ -85,7 +85,7 @@ void *Memory_alloc(size_t size) {
     /* 找不到可用的内存碎片空间且末尾空间不足 */
     if ((current_mem_block->next_mem_block == NULL) &&
         (allocated_mem_head + size > memory_pool_end)) {
-        Task_endAtomic();
+        Atomic_end();
         return NULL;
     }
 
@@ -96,7 +96,7 @@ void *Memory_alloc(size_t size) {
     current_mem_block->next_mem_block = mem_block_info;
     memory_pool_size -= size;
 
-    Task_endAtomic();
+    Atomic_end();
 
     return (void *)(allocated_mem_head + MEMORY_BLOCK_STRUCT_SIZE);
 }
@@ -109,7 +109,7 @@ void Memory_free(void *const ptr) {
 
     const struct MemoryBlockInfo *const mem_block_info = (struct MemoryBlockInfo *)((byte *)ptr - MEMORY_BLOCK_STRUCT_SIZE);
 
-    Task_atomic({
+    atomic({
         struct MemoryBlockInfo *prev_mem_block = memory_block_head;
         while (prev_mem_block->next_mem_block != mem_block_info) {
             prev_mem_block = prev_mem_block->next_mem_block;
