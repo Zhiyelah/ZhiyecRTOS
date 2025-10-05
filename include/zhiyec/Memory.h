@@ -5,8 +5,8 @@
  * @note 在配置文件中启用动态内存分配功能后添加
  */
 
-#ifndef _Memory_h
-#define _Memory_h
+#ifndef _ZHIYEC_MEMORY_H
+#define _ZHIYEC_MEMORY_H
 
 #include <stddef.h>
 
@@ -28,4 +28,4 @@ void Memory_free(void *const ptr);
  */
 size_t Memory_getFreeSize(void);
 
-#endif /* _Memory_h */
+#endif /* _ZHIYEC_MEMORY_H */

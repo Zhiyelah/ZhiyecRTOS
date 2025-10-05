@@ -4,8 +4,8 @@
  * @brief 任务调度
  */
 
-#ifndef _Task_h
-#define _Task_h
+#ifndef _ZHIYEC_TASK_H
+#define _ZHIYEC_TASK_H
 
 #include <../kernel/Port.h>
 #include <Config.h>
@@ -186,4 +186,4 @@ static inline struct TaskStruct *Task_fromTaskNode(const struct SListHead *const
         __isb(0xFu);                         \
     } while (0)
 
-#endif /* _Task_h */
+#endif /* _ZHIYEC_TASK_H */

@@ -5,8 +5,8 @@
  * @note 可选的模块
  */
 
-#ifndef _MsgQueue_h
-#define _MsgQueue_h
+#ifndef _ZHIYEC_MSGQUEUE_H
+#define _ZHIYEC_MSGQUEUE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -62,4 +62,4 @@ void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
 bool MsgQueue_tryReceive(struct MsgQueue *const msg_queue, void *const data,
                          const tick_t timeout);
 
-#endif /* _MsgQueue_h */
+#endif /* _ZHIYEC_MSGQUEUE_H */

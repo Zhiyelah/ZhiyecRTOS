@@ -5,8 +5,8 @@
  * @note 可选的模块, 依赖互斥锁模块
  */
 
-#ifndef _ReentrantLock_h
-#define _ReentrantLock_h
+#ifndef _ZHIYEC_REENTRANTLOCK_H
+#define _ZHIYEC_REENTRANTLOCK_H
 
 #include <stdbool.h>
 #include <zhiyec/Tick.h>
@@ -42,4 +42,4 @@ bool ReentrantLock_tryLock(struct ReentrantLock *const lock, const tick_t timeou
  */
 void ReentrantLock_unlock(struct ReentrantLock *const lock);
 
-#endif /* _ReentrantLock_h */
+#endif /* _ZHIYEC_REENTRANTLOCK_H */

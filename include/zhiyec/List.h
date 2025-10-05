@@ -1,5 +1,5 @@
-#ifndef _List_h
-#define _List_h
+#ifndef _ZHIYEC_LIST_H
+#define _ZHIYEC_LIST_H
 
 #include <zhiyec/Types.h>
 
@@ -88,4 +88,4 @@ struct QueueList {
         front_node->next = NULL;                                          \
     } while (0)
 
-#endif /* _List_h */
+#endif /* _ZHIYEC_LIST_H */

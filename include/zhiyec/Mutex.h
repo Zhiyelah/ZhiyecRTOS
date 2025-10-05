@@ -5,8 +5,8 @@
  * @note 可选的模块, 依赖信号量模块
  */
 
-#ifndef _Mutex_h
-#define _Mutex_h
+#ifndef _ZHIYEC_MUTEX_H
+#define _ZHIYEC_MUTEX_H
 
 #include <stdbool.h>
 #include <zhiyec/Tick.h>
@@ -48,4 +48,4 @@ bool Mutex_tryLock(struct Mutex *const mutex, const tick_t timeout);
  */
 void Mutex_unlock(struct Mutex *const mutex);
 
-#endif /* _Mutex_h */
+#endif /* _ZHIYEC_MUTEX_H */

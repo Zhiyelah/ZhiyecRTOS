@@ -4,8 +4,8 @@
  * @brief 内核外设接口
  */
 
-#ifndef _Port_h
-#define _Port_h
+#ifndef _ZHIYEC_PORT_H
+#define _ZHIYEC_PORT_H
 
 #include <Config.h>
 #include <stdbool.h>
@@ -106,4 +106,4 @@ stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), voi
  */
 void StartFirstTask_Port(void);
 
-#endif /* _Port_h */
+#endif /* _ZHIYEC_PORT_H */

@@ -5,8 +5,8 @@
  * @note 可选的模块
  */
 
-#ifndef _Hook_h
-#define _Hook_h
+#ifndef _ZHIYEC_HOOK_H
+#define _ZHIYEC_HOOK_H
 
 /* 注册钩子 */
 
@@ -19,4 +19,4 @@
 /* 任务删除钩子 */
 #define Hook_taskDeletion(task) ((void)0)
 
-#endif /* _Hook_h */
+#endif /* _ZHIYEC_HOOK_H */

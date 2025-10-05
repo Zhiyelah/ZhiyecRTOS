@@ -1,23 +1,21 @@
 /**
- * @file Defines.h
+ * @file Types.h
  * @author Zhiyelah
- * @brief 内核定义汇总
+ * @brief 类型定义
  */
 
-#ifndef _Defines_h
-#define _Defines_h
-
-#include <stdint.h>
+#ifndef _ZHIYEC_TYPES_H
+#define _ZHIYEC_TYPES_H
 
 /* 字节类型 */
 typedef unsigned char byte;
 
-/* 32位系统的栈单位大小 */
-typedef uint32_t stack_t;
+/* 栈单位大小 */
+typedef unsigned long stack_t;
 
 /* 滴答计数器类型 */
-typedef uint32_t tick_t;
-typedef int32_t stick_t;
+typedef unsigned long tick_t;
+typedef signed long stick_t;
 
 /* 单向链表 */
 struct SListHead {
@@ -30,4 +28,4 @@ struct ListHead {
     struct ListHead *next;
 };
 
-#endif /* _Defines_h */
+#endif /* _ZHIYEC_TYPES_H */

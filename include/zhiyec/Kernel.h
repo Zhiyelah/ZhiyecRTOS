@@ -1,5 +1,5 @@
-#ifndef _Kernel_h
-#define _Kernel_h
+#ifndef _ZHIYEC_KERNEL_H
+#define _ZHIYEC_KERNEL_H
 
 /**
  * 计算结构体成员偏移
@@ -21,4 +21,4 @@
 #define FORCEINLINE inline
 #endif /* FORCEINLINE */
 
-#endif /* _Kernel_h */
+#endif /* _ZHIYEC_KERNEL_H */

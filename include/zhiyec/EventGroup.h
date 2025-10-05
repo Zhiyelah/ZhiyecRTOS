@@ -5,8 +5,8 @@
  * @note 可选的模块
  */
 
-#ifndef _EventGroup_h
-#define _EventGroup_h
+#ifndef _ZHIYEC_EVENTGROUP_H
+#define _ZHIYEC_EVENTGROUP_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -61,4 +61,4 @@ bool EventGroup_listen(struct EventGroup *const event_group);
  */
 void EventGroup_trigger(struct EventGroup *const event_group, const enum EventType events);
 
-#endif /* _EventGroup_h */
+#endif /* _ZHIYEC_EVENTGROUP_H */

@@ -4,8 +4,8 @@
  * @brief 配置文件
  */
 
-#ifndef _Zhiyec_Config_h
-#define _Zhiyec_Config_h
+#ifndef _ZHIYEC_CONFIG_H
+#define _ZHIYEC_CONFIG_H
 
 /* 配置Tick中断频率 */
 #define CONFIG_SYSTICK_RATE_HZ 1000
@@ -40,4 +40,4 @@
 /*      配置默认的任务栈大小(启用动态内存分配且未指定任务栈大小时) */
 /*   */ #define CONFIG_DEFAULT_TASK_STACK_SIZE 128
 
-#endif /* _Zhiyec_Config_h */
+#endif /* _ZHIYEC_CONFIG_H */

@@ -4,8 +4,8 @@
  * @brief 任务列表
  */
 
-#ifndef _TaskList_h
-#define _TaskList_h
+#ifndef _ZHIYEC_TASKLIST_H
+#define _ZHIYEC_TASKLIST_H
 
 #include <stdbool.h>
 #include <zhiyec/List.h>
@@ -70,4 +70,4 @@ static inline struct TaskStruct *TaskList_getFrontTask(const enum TaskType type)
     return Task_fromTaskNode(QueueList_front(kernel_task_list[type]));
 }
 
-#endif /* _TaskList_h */
+#endif /* _ZHIYEC_TASKLIST_H */

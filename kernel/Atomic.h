@@ -1,5 +1,11 @@
-#ifndef _Atomic_h
-#define _Atomic_h
+/**
+ * @file Atomic.h
+ * @author Zhiyelah
+ * @brief 原子操作支持
+ */
+
+#ifndef _ZHIYEC_ATOMIC_H
+#define _ZHIYEC_ATOMIC_H
 
 #include <../kernel/Port.h>
 
@@ -22,4 +28,4 @@
         {code_block} Atomic_end(); \
     } while (0)
 
-#endif /* _Atomic_h */
+#endif /* _ZHIYEC_ATOMIC_H */

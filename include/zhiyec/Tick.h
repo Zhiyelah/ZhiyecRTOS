@@ -1,11 +1,11 @@
 /**
  * @file Tick.h
  * @author Zhiyelah
- * @brief 系统时基
+ * @brief 内核滴答支持
  */
 
-#ifndef _Tick_h
-#define _Tick_h
+#ifndef _ZHIYEC_TICK_H
+#define _ZHIYEC_TICK_H
 
 #include <Config.h>
 #include <stdbool.h>
@@ -35,4 +35,4 @@ extern volatile tick_t kernel_ticks;
  */
 #define Tick_after(current_ticks, target_ticks) ((bool)((stick_t)((target_ticks) - (current_ticks)) < 0))
 
-#endif /* _Tick_h */
+#endif /* _ZHIYEC_TICK_H */

@@ -5,8 +5,8 @@
  * @note 可选的模块
  */
 
-#ifndef _Semaphore_h
-#define _Semaphore_h
+#ifndef _ZHIYEC_SEMAPHORE_H
+#define _ZHIYEC_SEMAPHORE_H
 
 #include <stdbool.h>
 #include <zhiyec/Tick.h>
@@ -53,4 +53,4 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout);
  */
 void Semaphore_release(struct Semaphore *const sem);
 
-#endif /* _Semaphore_h */
+#endif /* _ZHIYEC_SEMAPHORE_H */
