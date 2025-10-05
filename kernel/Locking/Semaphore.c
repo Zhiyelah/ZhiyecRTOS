@@ -109,8 +109,32 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
     return true;
 }
 
+/* 中断获取信号量 */
+bool Semaphore_acquireFromISR(struct Semaphore *const sem) {
+    if (sem == NULL) {
+        return false;
+    }
+
+    bool return_value = false;
+
+    uint32_t prev_basepri = Port_disableInterruptFromISR();
+
+    if (sem->state - 1 >= 0) {
+        --(sem->state);
+        return_value = true;
+    }
+
+    Port_enableInterruptFromISR(prev_basepri);
+
+    return return_value;
+}
+
 /* 释放信号量 */
 void Semaphore_release(struct Semaphore *const sem) {
+    if (sem == NULL) {
+        return;
+    }
+
     atomic({
         if (sem->state < sem->max_value) {
             ++(sem->state);
@@ -128,7 +152,20 @@ void Semaphore_release(struct Semaphore *const sem) {
         }
     });
 
-    if (Task_needSwitch()) {
-        Task_yield();
+    Task_yield();
+}
+
+/* 中断释放信号量 */
+void Semaphore_releaseFromISR(struct Semaphore *const sem) {
+    if (sem == NULL) {
+        return;
     }
+
+    uint32_t prev_basepri = Port_disableInterruptFromISR();
+
+    if (sem->state < sem->max_value) {
+        ++(sem->state);
+    }
+
+    Port_enableInterruptFromISR(prev_basepri);
 }
