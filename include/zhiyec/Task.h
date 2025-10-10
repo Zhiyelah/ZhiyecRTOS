@@ -97,9 +97,9 @@ struct TaskStruct {
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr);
 
 /**
- * @brief 开始执行任务, 不会执行到该函数下文
+ * @brief 开始调度任务, 不会执行到该函数下文
  */
-int Task_exec(void);
+int Task_schedule(void);
 
 /**
  * @brief 任务睡眠
@@ -179,11 +179,12 @@ static inline struct TaskStruct *Task_fromTaskNode(const struct SListHead *const
 /**
  * @brief 让出CPU
  */
-#define Task_yield()                         \
-    do {                                     \
-        Interrupt_CTRL_Reg = PendSV_SET_Bit; \
-        __dsb(0xFu);                         \
-        __isb(0xFu);                         \
+#define Task_yield()                       \
+    do {                                   \
+        extern void CallPendSV_Port(void); \
+        CallPendSV_Port();                 \
+        __dsb(0xFu);                       \
+        __isb(0xFu);                       \
     } while (0)
 
 #endif /* _ZHIYEC_TASK_H */

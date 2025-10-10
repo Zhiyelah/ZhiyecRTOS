@@ -4,18 +4,13 @@
 #include <zhiyec/List.h>
 #include <zhiyec/Task.h>
 
-#define SYSTICK_RATE_HZ (CONFIG_SYSTICK_RATE_HZ)
-#define CPU_CLOCK_HZ (CONFIG_CPU_CLOCK_HZ)
-#define SYSTICK_LOAD_REG_VALUE (CPU_CLOCK_HZ / SYSTICK_RATE_HZ)
+/* 内存字节对齐位 */
+#define BYTE_ALIGNMENT 8
 
 #define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
 
 #define DEFAULT_TASK_STACK_SIZE (CONFIG_DEFAULT_TASK_STACK_SIZE)
 #define TASK_MAX_NUM (CONFIG_TASK_MAX_NUM)
-
-#if (SYSTICK_LOAD_REG_VALUE > 0xFFFFFFul)
-#error "the value "CONFIG_SYSTICK_RATE_HZ" in file Config.h is too small."
-#endif /* SYSTICK_LOAD_REG_VALUE overflow */
 
 /* 用于管理当前任务 */
 static size_t task_count = 0U;
@@ -305,8 +300,8 @@ static void kernelIdleTask(void *arg) {
     }
 }
 
-/* 开始执行任务, 调度器初始化配置 */
-int Task_exec() {
+/* 初始化调度器, 并开始执行任务 */
+int Task_schedule() {
     /* 尝试创建空闲任务 */
     const struct TaskAttribute idle_task_attr = {
         .stack = kernelIdleTask_stack,
@@ -322,18 +317,12 @@ int Task_exec() {
             isb
         }
 
-        /* 配置SysTick及PendSV优先级 */
-        SHPR3_Reg |= SHPR3_PENDSV_Priority;
-        SHPR3_Reg |= SHPR3_SYSTICK_Priority;
-        /* 配置SysTick */
-        SysTick_CTRL_Reg = 0;
-        SysTick_LOAD_Reg = (SYSTICK_LOAD_REG_VALUE & 0xFFFFFFul) - 1;
-        SysTick_VALUE_Reg = 0;
-        SysTick_CTRL_Reg = SysTick_ENABLE_Bit | SysTick_INT_Bit | SysTick_CLK_Bit;
+        /* 初始化Tick */
+        InitSysTick_Port();
 
         /* 开始执行任务 */
         StartFirstTask_Port();
-        /* 不会返回 */
+        /* 将不会返回 */
         return 0;
     }
 

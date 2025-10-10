@@ -13,35 +13,6 @@
 #include <zhiyec/Kernel.h>
 #include <zhiyec/Types.h>
 
-/* 内存字节对齐位 */
-#define BYTE_ALIGNMENT 8
-
-/* ARM-CM0 to ARM-CM7 */
-/* SysTick寄存器 */
-#define SysTick_CTRL_Reg (*((volatile uint32_t *)0xe000e010))
-#define SysTick_LOAD_Reg (*((volatile uint32_t *)0xe000e014))
-#define SysTick_VALUE_Reg (*((volatile uint32_t *)0xe000e018))
-
-/* SysTick控制寄存器位定义 */
-#define SysTick_ENABLE_Bit (1UL << 0UL)
-#define SysTick_INT_Bit (1UL << 1UL)
-#define SysTick_CLK_Bit (1UL << 2UL)
-
-/* 优先级寄存器 */
-#define SHPR3_Reg (*((volatile uint32_t *)0xe000ed20))
-/* 最小优先级 */
-#define MIN_Interrupt_Priority (0xFFul)
-
-/* SysTick和PendSV的优先级 */
-#define SHPR3_PENDSV_Priority (((uint32_t)MIN_Interrupt_Priority) << 16UL)
-#define SHPR3_SYSTICK_Priority (((uint32_t)CONFIG_KERNEL_INTERRUPT_PRIORITY) << 24UL)
-
-/* 中断控制与状态寄存器 */
-#define Interrupt_CTRL_Reg (*((volatile uint32_t *)0xe000ed04))
-
-/* PendSV中断位 */
-#define PendSV_SET_Bit (1UL << 28UL)
-
 /**
  * @brief 禁用中断
  */
@@ -102,7 +73,12 @@ static FORCEINLINE void Port_enableInterrupt() {
 stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
 
 /**
- * @brief 任务执行接口
+ * @brief Tick初始化接口
+ */
+void InitSysTick_Port(void);
+
+/**
+ * @brief 任务跳转接口
  */
 void StartFirstTask_Port(void);
 
