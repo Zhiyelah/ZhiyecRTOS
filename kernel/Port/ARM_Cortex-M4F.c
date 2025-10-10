@@ -1,4 +1,3 @@
-#include <../kernel/Port.h>
 #include <zhiyec/Task.h>
 #include <../kernel/Hook.h>
 
@@ -6,6 +5,51 @@
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
 #define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
 #define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
+#define SYSTICK_LOAD_REG_VALUE (CONFIG_CPU_CLOCK_HZ / CONFIG_SYSTICK_RATE_HZ)
+
+/* SysTick寄存器 */
+#define SysTick_CTRL_Reg (*((volatile uint32_t *)0xe000e010))
+#define SysTick_LOAD_Reg (*((volatile uint32_t *)0xe000e014))
+#define SysTick_VALUE_Reg (*((volatile uint32_t *)0xe000e018))
+
+uint32_t GetSysTickLoadReg_Port() {
+    return SysTick_LOAD_Reg;
+}
+
+uint32_t GetSysTickValueReg_Port() {
+    return SysTick_VALUE_Reg;
+}
+
+/* SysTick控制寄存器位定义 */
+#define SysTick_ENABLE_Bit (1UL << 0UL)
+#define SysTick_INT_Bit (1UL << 1UL)
+#define SysTick_CLK_Bit (1UL << 2UL)
+
+/* 优先级寄存器 */
+#define SHPR3_Reg (*((volatile uint32_t *)0xe000ed20))
+/* 最小优先级 */
+#define MIN_Interrupt_Priority (0xFFul)
+
+/* SysTick和PendSV的优先级 */
+#define SHPR3_PENDSV_Priority (((uint32_t)MIN_Interrupt_Priority) << 16UL)
+#define SHPR3_SYSTICK_Priority (((uint32_t)CONFIG_KERNEL_INTERRUPT_PRIORITY) << 24UL)
+
+/* 中断控制与状态寄存器 */
+#define Interrupt_CTRL_Reg (*((volatile uint32_t *)0xe000ed04))
+
+/* PendSV中断位 */
+#define PendSV_SET_Bit (1UL << 28UL)
+
+void InitSysTick_Port() {
+    /* 配置SysTick及PendSV优先级 */
+    SHPR3_Reg |= SHPR3_PENDSV_Priority;
+    SHPR3_Reg |= SHPR3_SYSTICK_Priority;
+    /* 配置SysTick */
+    SysTick_CTRL_Reg = 0;
+    SysTick_LOAD_Reg = (SYSTICK_LOAD_REG_VALUE & 0xFFFFFFul) - 1;
+    SysTick_VALUE_Reg = 0;
+    SysTick_CTRL_Reg = SysTick_ENABLE_Bit | SysTick_INT_Bit | SysTick_CLK_Bit;
+}
 
 /* 初始化任务栈接口 */
 stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), void *const arg) {
@@ -98,6 +142,10 @@ __asm void SVC_Handler_Port() {
 
     /* 从PSP中恢复寄存器 */
     bx lr
+}
+
+void CallPendSV_Port() {
+    Interrupt_CTRL_Reg = PendSV_SET_Bit;
 }
 
 __asm void PendSV_Handler_Port() {
