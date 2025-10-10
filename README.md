@@ -45,8 +45,8 @@ int main() {
     /* 创建任务 */
     Task_create(doSomethingTask, NULL, &do_something_task_attr);
 
-    /* 开始执行任务 */
-    return Task_exec();
+    /* 开始调度任务 */
+    return Task_schedule();
 }
 ```
 
