@@ -1,24 +1,21 @@
 #ifndef _ZHIYEC_KERNEL_H
 #define _ZHIYEC_KERNEL_H
 
-/**
- * 计算结构体成员偏移
- */
-#ifdef offsetof
-#undef offsetof
-#endif /* offsetof */
-#define offsetof(type, member) ((size_t)&(((type *)0)->member))
+#include <stddef.h>
+#include <zhiyec/Types.h>
 
 /**
- * 获取链表容器
+ * @brief 获取链表节点所在的结构体
+ * @param ptr 节点指针
+ * @param type 结构体类型
+ * @param member 节点在结构体中的成员名称
  */
 #define container_of(ptr, type, member) ((type *)((byte *)(ptr) - offsetof(type, member)))
 
-/* 强制内联 */
-#ifdef __forceinline
-#define FORCEINLINE __forceinline
-#else
-#define FORCEINLINE inline
-#endif /* FORCEINLINE */
+/**
+ * @brief 在栈上分配空间
+ * @param n_byte 分配的字节
+ */
+#define ALLOCATE_STACK(n_byte) ((void *)((byte[(n_byte)]){}))
 
 #endif /* _ZHIYEC_KERNEL_H */
