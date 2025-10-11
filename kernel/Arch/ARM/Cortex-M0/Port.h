@@ -8,15 +8,13 @@
 #define _ZHIYEC_PORT_H
 
 #include <Config.h>
-#include <stdbool.h>
 #include <stdint.h>
-#include <zhiyec/Kernel.h>
 #include <zhiyec/Types.h>
 
 /**
  * @brief 禁用中断
  */
-static FORCEINLINE void Port_disableInterrupt() {
+static inline void Port_disableInterrupt() {
     extern volatile int interrupt_disabled_nesting;
 
     uint32_t new_basepri = CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY;
@@ -34,7 +32,7 @@ static FORCEINLINE void Port_disableInterrupt() {
  * @return 禁用前的中断屏蔽优先级
  * @note 中断安全的版本
  */
-static FORCEINLINE uint32_t Port_disableInterruptFromISR() {
+static inline uint32_t Port_disableInterruptFromISR() {
     uint32_t prev_basepri;
     __asm {
         mrs prev_basepri, basepri
@@ -48,7 +46,7 @@ static FORCEINLINE uint32_t Port_disableInterruptFromISR() {
  * @param prev_basepri 禁用前的中断屏蔽优先级
  * @note 中断安全的版本
  */
-static FORCEINLINE void Port_enableInterruptFromISR(uint32_t prev_basepri) {
+static inline void Port_enableInterruptFromISR(uint32_t prev_basepri) {
     extern volatile int interrupt_disabled_nesting;
 
     --interrupt_disabled_nesting;
@@ -63,19 +61,35 @@ static FORCEINLINE void Port_enableInterruptFromISR(uint32_t prev_basepri) {
 /**
  * @brief 恢复中断
  */
-static FORCEINLINE void Port_enableInterrupt() {
+static inline void Port_enableInterrupt() {
     Port_enableInterruptFromISR(0U);
 }
 
-/**
- * @brief 堆栈初始化接口
- */
-stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
+/* 中断控制与状态寄存器 */
+#define Interrupt_CTRL_Reg (*((volatile uint32_t *)0xe000ed04))
+
+/* PendSV中断位 */
+#define PendSV_SET_Bit (1UL << 28UL)
+
+#define Port_yield()                         \
+    do {                                     \
+        Interrupt_CTRL_Reg = PendSV_SET_Bit; \
+        __dsb(0xFu);                         \
+        __isb(0xFu);                         \
+    } while (0)
+
+#define SysTick_LOAD_Reg (*((volatile uint32_t *)0xe000e014))
+#define SysTick_VALUE_Reg (*((volatile uint32_t *)0xe000e018))
 
 /**
  * @brief Tick初始化接口
  */
 void InitSysTick_Port(void);
+
+/**
+ * @brief 堆栈初始化接口
+ */
+stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), void *const arg);
 
 /**
  * @brief 任务跳转接口

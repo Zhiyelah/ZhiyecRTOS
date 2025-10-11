@@ -1,3 +1,4 @@
+#include "Port.h"
 #include <zhiyec/Task.h>
 #include <../kernel/Hook.h>
 
@@ -9,16 +10,6 @@
 
 /* SysTick寄存器 */
 #define SysTick_CTRL_Reg (*((volatile uint32_t *)0xe000e010))
-#define SysTick_LOAD_Reg (*((volatile uint32_t *)0xe000e014))
-#define SysTick_VALUE_Reg (*((volatile uint32_t *)0xe000e018))
-
-uint32_t GetSysTickLoadReg_Port() {
-    return SysTick_LOAD_Reg;
-}
-
-uint32_t GetSysTickValueReg_Port() {
-    return SysTick_VALUE_Reg;
-}
 
 /* SysTick控制寄存器位定义 */
 #define SysTick_ENABLE_Bit (1UL << 0UL)
@@ -33,12 +24,6 @@ uint32_t GetSysTickValueReg_Port() {
 /* SysTick和PendSV的优先级 */
 #define SHPR3_PENDSV_Priority (((uint32_t)MIN_Interrupt_Priority) << 16UL)
 #define SHPR3_SYSTICK_Priority (((uint32_t)CONFIG_KERNEL_INTERRUPT_PRIORITY) << 24UL)
-
-/* 中断控制与状态寄存器 */
-#define Interrupt_CTRL_Reg (*((volatile uint32_t *)0xe000ed04))
-
-/* PendSV中断位 */
-#define PendSV_SET_Bit (1UL << 28UL)
 
 void InitSysTick_Port() {
     /* 配置SysTick及PendSV优先级 */
@@ -64,8 +49,6 @@ stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), voi
     top_of_stack -= 4;
     /* r0寄存器 */
     *(--top_of_stack) = (stack_t)arg;
-    /* EXC_RETURN */
-    *(--top_of_stack) = 0xFFFFFFFD;
     /* r11, r10, r9, r8, r7, r6, r5, r4寄存器 */
     top_of_stack -= 8;
 
@@ -83,10 +66,6 @@ __asm void StartFirstTask_Port() {
 
     /* 将MSP设置为初始值 */
     msr msp, r0
-
-    /* 清除表示FPU正在使用的标志位, 防止在SVC栈中预留不必要的空间 */
-    mov r0, #0
-    msr control, r0
 
     /* 启用全局中断 */
     cpsie i
@@ -109,8 +88,6 @@ void SysTick_Handler_Port() {
 
     uint32_t prev_basepri = Port_disableInterruptFromISR();
 
-    ++kernel_ticks;
-
     if (Task_needSwitch()) {
         Interrupt_CTRL_Reg = PendSV_SET_Bit;
     }
@@ -125,12 +102,12 @@ __asm void SVC_Handler_Port() {
     PRESERVE8
 
     /* 获取最近任务的栈顶指针 */
-    ldr r0, =current_task
+    ldr r0, =kernel_current_task
     ldr r0, [r0]
     ldr r0, [r0]
 
     /* 加载栈顶指针中对应的寄存器 */
-    ldmia r0!, {r4-r11, lr}
+    ldmia r0!, {r4-r11}
 
     /* 设置进程堆栈指针为第一个任务的栈顶指针 */
     msr psp, r0
@@ -140,12 +117,12 @@ __asm void SVC_Handler_Port() {
     mov r0, #0
     msr basepri, r0
 
+    /* 使用Thumb指令(Cortex-M仅支持Thumb指令) */
+    /* 使用PSP作为堆栈指针，并切换为用户级 */
+    orr lr, #0x0D
+
     /* 从PSP中恢复寄存器 */
     bx lr
-}
-
-void CallPendSV_Port() {
-    Interrupt_CTRL_Reg = PendSV_SET_Bit;
 }
 
 __asm void PendSV_Handler_Port() {
@@ -159,33 +136,26 @@ __asm void PendSV_Handler_Port() {
     /* 确保PSP为最新 */
     isb
 
-    /* 如果使用FPU, 保存浮点寄存器 */
-    tst lr, #0x10
-    it eq
-    vstmdbeq r0!, {s16-s31}
+    /* 除PendSV自动保存的寄存器外，将r4~r11保存到当前任务的任务栈中 */
+    stmdb r0!, {r4-r11}
 
-    /* 除PendSV自动保存的寄存器外，将r4~r11和lr保存到当前任务的任务栈中 */
-    stmdb r0!, {r4-r11, lr}
-
-    extern current_task;
+    extern kernel_current_task;
 
     /* 获取最近任务指向的结构体 */
-    ldr	r3, =current_task
+    ldr	r3, =kernel_current_task
     ldr	r1, [r3]
 
     /* 将进程堆栈指针保存到最近任务的堆栈指针 */
     str r0, [r1]
 
     /* 将最近任务的地址和lr保存到内核堆栈MSP中 */
-    stmdb sp!, {r3}
+    stmdb sp!, {r3, lr}
 
     /* 屏蔽受管理的中断 */
     mov r0, #MANAGED_INTERRUPT_MAX_PRIORITY
-    cpsid i
     msr basepri, r0
     dsb
     isb
-    cpsie i
 
     extern Task_switchNextTask;
 
@@ -196,9 +166,9 @@ __asm void PendSV_Handler_Port() {
     mov r0, #0
     msr basepri, r0
 
-    /* 从MSP中加载之前保存的最近任务的地址 */
+    /* 从MSP中加载之前保存的最近任务的地址和lr寄存器 */
     /* 因为之前跳转过函数，寄存器的值会重置 */
-    ldmia sp!, {r3}
+    ldmia sp!, {r3, lr}
 
     /* 重新从最近任务中读取栈顶指针 */
     /* 此时为新的栈顶指针 */
@@ -206,12 +176,7 @@ __asm void PendSV_Handler_Port() {
     ldr r0, [r0]
 
     /* 从任务栈中加载对应寄存器 */
-    ldmia r0!, {r4-r11, lr}
-
-    /* 如果使用了FPU, 恢复浮点寄存器 */
-    tst lr, #0x10
-    it eq
-    vldmiaeq r0!, {s16-s31}
+    ldmia r0!, {r4-r11}
 
     /* 将栈顶指针更新到PSP寄存器 */
     msr psp, r0
@@ -220,5 +185,4 @@ __asm void PendSV_Handler_Port() {
     /* 跳转执行 */
     bx lr
     nop
-    ALIGN
 }
