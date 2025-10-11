@@ -14,9 +14,10 @@ Zhiyecontroller RTOS 是用于嵌入式微控制器 (MCU) 的实时操作系统�
 ```bash
 git clone https://github.com/Zhiyelah/ZhiyecRTOS.git
 ```
-2. 将模块的源文件和头文件导入到 C/C++ 工程中
-3. 根据目标芯片修改 `Config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
-4. 参考以下示例创建任务
+2. 将目录文件添加到 C/C++ 工程中
+3. 从 `kernel/Arch/` 中选择合适的架构接口文件并放置到 `kernel/` 目录下
+4. 根据目标芯片修改 `Config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
+5. 参考以下示例创建任务
 
 #### 任务创建示例（使用静态内存分配）
 ```C
@@ -39,8 +40,8 @@ int main() {
         .stack_size = sizeof(do_something_task_stack)/sizeof(do_something_task_stack[0]),
         .type = COMMON_TASK, /* COMMON_TASK 或 REALTIME_TASK */
     };
-    /* 或者也可以这样 */
-    /* TaskAttribute_def(do_something_task_attr, do_something_task_stack, COMMON_TASK); */
+    /* 或者也可以这样来定义任务属性
+       TaskAttribute_def(do_something_task_attr, do_something_task_stack, COMMON_TASK); */
 
     /* 创建任务 */
     Task_create(doSomethingTask, NULL, &do_something_task_attr);
