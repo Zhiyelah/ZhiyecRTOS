@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <utility/Printf.h>
+#include <zhiyec/Kernel.h>
 #include <zhiyec/Mutex.h>
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
@@ -9,7 +10,7 @@
 #endif
 
 static void (*printf_output)(char) = NULL;
-static struct Mutex *print_lock = (struct Mutex *)(byte[Mutex_byte]){};
+static struct Mutex *print_lock = ALLOCATE_STACK(Mutex_byte);
 
 void Printf_setOutput(void (*output)(char)) {
     printf_output = output;
