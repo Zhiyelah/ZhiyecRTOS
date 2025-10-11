@@ -10,10 +10,9 @@
 #include <../kernel/Port.h>
 #include <Config.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+#include <zhiyec/Kernel.h>
 #include <zhiyec/List.h>
-#include <zhiyec/Tick.h>
 #include <zhiyec/Types.h>
 
 enum TaskType {
@@ -137,17 +136,13 @@ void Task_suspendAll(void);
  */
 void Task_resumeAll(void);
 
-/**
- * @brief 是否需要切换任务
- * @return true表示需要切换任务, 否则不需要
- */
-bool Task_needSwitch(void);
+extern struct TaskStruct *volatile kernel_current_task;
 
 /**
  * @brief 获取当前任务
  * @return 当前任务指针
  */
-struct TaskStruct *Task_currentTask(void);
+#define Task_currentTask() (kernel_current_task)
 
 /**
  * @brief 获取任务的类型
@@ -177,14 +172,14 @@ static inline struct TaskStruct *Task_fromTaskNode(const struct SListHead *const
 }
 
 /**
+ * @brief 更新内核Tick和任务状态
+ * @return 是否需要切换任务
+ */
+bool Task_needSwitch(void);
+
+/**
  * @brief 让出CPU
  */
-#define Task_yield()                       \
-    do {                                   \
-        extern void CallPendSV_Port(void); \
-        CallPendSV_Port();                 \
-        __dsb(0xFu);                       \
-        __isb(0xFu);                       \
-    } while (0)
+#define Task_yield() Port_yield()
 
 #endif /* _ZHIYEC_TASK_H */
