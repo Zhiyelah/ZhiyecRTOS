@@ -51,8 +51,6 @@ void Semaphore_acquire(struct Semaphore *const sem) {
         return;
     }
 
-    bool is_suspended = false;
-
     atomic({
         --(sem->state);
 
@@ -62,14 +60,11 @@ void Semaphore_acquire(struct Semaphore *const sem) {
 
             if (front_node) {
                 QueueList_push(sem->tasks_waiting_to_acquire, front_node);
-                is_suspended = true;
             }
         }
     });
 
-    if (is_suspended) {
-        Task_yield();
-    }
+    __dmb(0U);
 }
 
 /* 尝试获得信号量, 超时后返回 */
@@ -106,6 +101,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
         continue;
     }
 
+    __dmb(0U);
     return true;
 }
 
@@ -152,7 +148,7 @@ void Semaphore_release(struct Semaphore *const sem) {
         }
     });
 
-    Task_yield();
+    __dmb(0U);
 }
 
 /* 中断释放信号量 */

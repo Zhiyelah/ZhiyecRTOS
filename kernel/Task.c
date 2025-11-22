@@ -31,8 +31,9 @@ static size_t task_structures_pos = 0U;
 #endif /* USE_DYNAMIC_MEMORY_ALLOCATION */
 
 /* 阻塞任务列表 */
-static struct StackList *blocked_task_list_curr_cycle = &(struct StackList){};
-static struct StackList *blocked_task_list_next_cycle = &(struct StackList){};
+static struct StackList blocked_task_list[2];
+static struct StackList *blocked_task_list_curr_cycle = &blocked_task_list[0];
+static struct StackList *blocked_task_list_next_cycle = &blocked_task_list[1];
 static bool blocked_task_list_ready_switch_next_cycle = false;
 
 /* 等待删除任务列表 */
@@ -229,6 +230,8 @@ void Task_suspendAll() {
     atomic({
         ++task_suspended_count;
     });
+
+    __dmb(0U);
 }
 
 /* 恢复所有任务 */

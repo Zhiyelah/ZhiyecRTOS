@@ -74,8 +74,8 @@ static inline void Port_enableInterrupt() {
 #define Port_yield()                         \
     do {                                     \
         Interrupt_CTRL_Reg = PendSV_SET_Bit; \
-        __dsb(0xFu);                         \
-        __isb(0xFu);                         \
+        __dsb(0U);                           \
+        __isb(0U);                           \
     } while (0)
 
 #define SysTick_LOAD_Reg (*((volatile uint32_t *)0xe000e014))
