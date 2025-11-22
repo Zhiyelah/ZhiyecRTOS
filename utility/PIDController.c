@@ -1,7 +1,8 @@
+#include <math.h>
 #include <utility/PIDController.h>
 #include <zhiyec/Assert.h>
 
-struct PIDObject {
+struct PIDController {
     float kp;
     float ki;
     float kd;
@@ -13,16 +14,16 @@ struct PIDObject {
     float sum_error;
 };
 
-static_assert(PIDObject_byte == sizeof(struct PIDObject), "size mismatch");
+static_assert(PIDController_byte == sizeof(struct PIDController), "size mismatch");
 
 /* 初始化PID控制器 */
-struct PIDObject *PIDController_init(void *const pid_mem,
-                                     const float kp, const float ki, const float kd) {
+struct PIDController *PIDController_init(void *const pid_mem,
+                                         const float kp, const float ki, const float kd) {
     if (!pid_mem) {
         return 0;
     }
 
-    struct PIDObject *pid = (struct PIDObject *)pid_mem;
+    struct PIDController *pid = (struct PIDController *)pid_mem;
 
     pid->kp = kp;
     pid->ki = ki;
@@ -33,14 +34,8 @@ struct PIDObject *PIDController_init(void *const pid_mem,
     return pid;
 }
 
-/* 计算误差 */
-float PIDController_calculateError(float target_value, float current_value) {
-    float error = target_value - current_value;
-    return error;
-}
-
 /* 计算PID */
-float PIDController_calculateOutput(struct PIDObject *const pid,
+float PIDController_calculateOutput(struct PIDController *const pid,
                                     const float error, const float dt) {
 
     pid->sum_error += error * dt;
@@ -50,7 +45,10 @@ float PIDController_calculateOutput(struct PIDObject *const pid,
     /* 积分项 */
     const float integral = pid->ki * pid->sum_error;
     /* 微分项 */
-    const float derivative = pid->kd * ((error - pid->prev_error) / dt);
+    float derivative = 0.0f;
+    if (fabs(dt) > 0.001f) {
+        derivative = pid->kd * ((error - pid->prev_error) / dt);
+    }
 
     pid->pid_output = proportional + integral + derivative;
 
@@ -60,6 +58,6 @@ float PIDController_calculateOutput(struct PIDObject *const pid,
 }
 
 /* 获取PID输出 */
-float PIDController_getOutput(const struct PIDObject *const pid) {
+float PIDController_getOutput(const struct PIDController *const pid) {
     return pid->pid_output;
 }

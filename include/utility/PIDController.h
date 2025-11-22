@@ -8,9 +8,9 @@
 #ifndef _PIDController_h
 #define _PIDController_h
 
-struct PIDObject;
+struct PIDController;
 
-#define PIDObject_byte 24
+#define PIDController_byte 24
 
 /**
  * @brief 初始化PID控制器
@@ -20,29 +20,33 @@ struct PIDObject;
  * @param kd PID微分项参数
  * @return 对象指针
  */
-struct PIDObject *PIDController_init(void *const pid_mem,
-                                     const float kp, const float ki, const float kd);
+struct PIDController *PIDController_init(void *const pid_mem,
+                                         const float kp, const float ki, const float kd);
 
 /**
  * @brief 计算误差
  * @param target_value 目标值
  * @param current_value 当前值
+ * @return 误差
  */
-float PIDController_calculateError(float target_value, float current_value);
+#define PIDController_calculateError(target_value, current_value) \
+    ((float)(target_value - current_value))
 
 /**
  * @brief 计算PID
  * @param pid PID对象
  * @param error 误差
  * @param dt 时间间隔Δt, 单位: 秒
+ * @return PID输出
  */
-float PIDController_calculateOutput(struct PIDObject *const pid,
+float PIDController_calculateOutput(struct PIDController *const pid,
                                     const float error, const float dt);
 
 /**
  * @brief 获取PID输出
  * @param pid PID对象
+ * @return PID输出
  */
-float PIDController_getOutput(const struct PIDObject *const pid);
+float PIDController_getOutput(const struct PIDController *const pid);
 
 #endif /* _PIDController_h */
