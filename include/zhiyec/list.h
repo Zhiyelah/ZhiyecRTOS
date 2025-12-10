@@ -1,7 +1,7 @@
 #ifndef _ZHIYEC_LIST_H
 #define _ZHIYEC_LIST_H
 
-#include <zhiyec/Types.h>
+#include <zhiyec/types.h>
 
 /* 双向链表API */
 

@@ -1,7 +1,7 @@
-#include <../kernel/Port.h>
-#include <Config.h>
+#include <../kernel/port.h>
+#include <config.h>
 #include <stdint.h>
-#include <utility/Time.h>
+#include <utility/time.h>
 
 #define CPU_CLOCK_HZ (CONFIG_CPU_CLOCK_HZ)
 

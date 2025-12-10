@@ -10,7 +10,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <zhiyec/Tick.h>
+#include <zhiyec/tick.h>
 
 struct MsgQueue;
 

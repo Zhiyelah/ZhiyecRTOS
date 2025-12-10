@@ -7,13 +7,13 @@
 #ifndef _ZHIYEC_TASK_H
 #define _ZHIYEC_TASK_H
 
-#include <../kernel/Port.h>
-#include <Config.h>
+#include <../kernel/port.h>
+#include <config.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <zhiyec/Kernel.h>
-#include <zhiyec/List.h>
-#include <zhiyec/Types.h>
+#include <zhiyec/kernel.h>
+#include <zhiyec/list.h>
+#include <zhiyec/types.h>
 
 enum TaskType {
     /* 普通任务 */

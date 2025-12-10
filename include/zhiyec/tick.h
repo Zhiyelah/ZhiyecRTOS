@@ -7,9 +7,9 @@
 #ifndef _ZHIYEC_TICK_H
 #define _ZHIYEC_TICK_H
 
-#include <Config.h>
+#include <config.h>
 #include <stdbool.h>
-#include <zhiyec/Types.h>
+#include <zhiyec/types.h>
 
 #define SYSTICK_RATE_HZ (CONFIG_SYSTICK_RATE_HZ)
 

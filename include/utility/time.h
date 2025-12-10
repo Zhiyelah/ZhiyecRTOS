@@ -7,7 +7,7 @@
 #ifndef _Time_h
 #define _Time_h
 
-#include <zhiyec/Tick.h>
+#include <zhiyec/tick.h>
 
 typedef tick_t Time_t;
 

@@ -1,4 +1,4 @@
-#include <driver/I2C_Software.h>
+#include <driver/i2c_software.h>
 
 #define HIGH 0x01
 #define LOW 0x00

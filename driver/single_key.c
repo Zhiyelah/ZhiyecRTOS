@@ -1,4 +1,4 @@
-#include <driver/SingleKey.h>
+#include <driver/single_key.h>
 
 void Key_pressedEvent(struct SingleKey *single_key) {
 

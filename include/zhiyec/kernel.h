@@ -2,7 +2,7 @@
 #define _ZHIYEC_KERNEL_H
 
 #include <stddef.h>
-#include <zhiyec/Types.h>
+#include <zhiyec/types.h>
 
 /**
  * @brief 获取链表节点所在的结构体

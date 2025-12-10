@@ -9,7 +9,7 @@
 #define _ZHIYEC_SEMAPHORE_H
 
 #include <stdbool.h>
-#include <zhiyec/Tick.h>
+#include <zhiyec/tick.h>
 
 struct Semaphore;
 

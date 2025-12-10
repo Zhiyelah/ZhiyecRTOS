@@ -1,12 +1,12 @@
-#include <Config.h>
+#include <config.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <utility/Printf.h>
-#include <zhiyec/Kernel.h>
-#include <zhiyec/Mutex.h>
+#include <utility/printf.h>
+#include <zhiyec/kernel.h>
+#include <zhiyec/mutex.h>
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
-#include <zhiyec/Memory.h>
+#include <zhiyec/memory.h>
 #endif
 
 static void (*printf_output)(char) = NULL;

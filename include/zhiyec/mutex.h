@@ -9,7 +9,7 @@
 #define _ZHIYEC_MUTEX_H
 
 #include <stdbool.h>
-#include <zhiyec/Tick.h>
+#include <zhiyec/tick.h>
 
 struct Mutex;
 
