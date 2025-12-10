@@ -7,7 +7,7 @@
 #include <zhiyec/task.h>
 #include <zhiyec/tick.h>
 
-#define SYSCALL_INTERRUPT_MAX_PRIORITY (CONFIG_SYSCALL_INTERRUPT_MAX_PRIORITY)
+#define SHIELDABLE_INTERRUPT_MAX_PRIORITY (CONFIG_SHIELDABLE_INTERRUPT_MAX_PRIORITY)
 
 #define DEFAULT_TASK_STACK_SIZE (CONFIG_DEFAULT_TASK_STACK_SIZE)
 #define TASK_MAX_NUM (CONFIG_TASK_MAX_NUM)
@@ -284,7 +284,7 @@ int Task_schedule() {
     };
     if (Task_create(kernelIdleTask, NULL, &idle_task_attr)) {
         /* 屏蔽中断 */
-        uint32_t new_basepri = SYSCALL_INTERRUPT_MAX_PRIORITY;
+        uint32_t new_basepri = SHIELDABLE_INTERRUPT_MAX_PRIORITY;
         __asm {
             msr basepri, new_basepri
             dsb
@@ -304,7 +304,8 @@ int Task_schedule() {
 }
 
 /* 创建任务对象 */
-static FORCE_INLINE struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack) {
+static FORCE_INLINE struct TaskStruct *Task_newTaskStruct(stack_t *const stack,
+                                                          stack_t *const top_of_stack) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     struct TaskStruct *new_task = Memory_alloc(sizeof(struct TaskStruct));
     if (new_task != NULL) {
