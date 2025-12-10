@@ -1,5 +1,5 @@
 /**
- * @file EventGroup.h
+ * @file event_group.h
  * @author Zhiyelah
  * @brief 事件组
  * @note 可选的模块

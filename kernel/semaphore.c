@@ -1,9 +1,9 @@
-#include <../kernel/Atomic.h>
-#include <../kernel/TaskList.h>
+#include <../kernel/atomic.h>
+#include <../kernel/task_list.h>
 #include <stddef.h>
-#include <zhiyec/Assert.h>
-#include <zhiyec/List.h>
-#include <zhiyec/Semaphore.h>
+#include <zhiyec/assert.h>
+#include <zhiyec/list.h>
+#include <zhiyec/semaphore.h>
 
 struct Semaphore {
     /* 信号量状态 */

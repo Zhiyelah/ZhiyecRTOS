@@ -1,6 +1,6 @@
-#include "Port.h"
-#include <zhiyec/Task.h>
-#include <../kernel/Hook.h>
+#include "port.h"
+#include <zhiyec/task.h>
+#include <../kernel/hook.h>
 
 #define SysTick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT

@@ -1,5 +1,5 @@
 /**
- * @file Config.h
+ * @file config.h
  * @author Zhiyelah
  * @brief 配置文件
  */

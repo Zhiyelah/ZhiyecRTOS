@@ -1,10 +1,10 @@
-#include <../kernel/Atomic.h>
-#include <../kernel/Hook.h>
-#include <../kernel/TaskList.h>
+#include <../kernel/atomic.h>
+#include <../kernel/hook.h>
+#include <../kernel/task_list.h>
 #include <stddef.h>
-#include <zhiyec/List.h>
-#include <zhiyec/Task.h>
-#include <zhiyec/Tick.h>
+#include <zhiyec/list.h>
+#include <zhiyec/task.h>
+#include <zhiyec/tick.h>
 
 /* 内存字节对齐位 */
 #define BYTE_ALIGNMENT 8

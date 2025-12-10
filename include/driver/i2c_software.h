@@ -1,5 +1,5 @@
 /**
- * @file I2C_Software.h
+ * @file i2c_software.h
  * @author Zhiyelah
  * @brief 软件模拟I2C通信
  */

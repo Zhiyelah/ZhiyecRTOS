@@ -1,8 +1,8 @@
-#include <../kernel/Atomic.h>
-#include <../kernel/TaskList.h>
-#include <zhiyec/Assert.h>
-#include <zhiyec/EventGroup.h>
-#include <zhiyec/List.h>
+#include <../kernel/atomic.h>
+#include <../kernel/task_list.h>
+#include <zhiyec/assert.h>
+#include <zhiyec/event_group.h>
+#include <zhiyec/list.h>
 
 struct EventGroup {
     /* 事件数 */

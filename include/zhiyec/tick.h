@@ -1,5 +1,5 @@
 /**
- * @file Tick.h
+ * @file tick.h
  * @author Zhiyelah
  * @brief 内核滴答支持
  */

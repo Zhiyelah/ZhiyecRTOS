@@ -1,8 +1,8 @@
-#include <../kernel/Port.h>
-#include <Config.h>
-#include <zhiyec/Memory.h>
-#include <zhiyec/Task.h>
-#include <zhiyec/Types.h>
+#include <../kernel/port.h>
+#include <config.h>
+#include <zhiyec/memory.h>
+#include <zhiyec/task.h>
+#include <zhiyec/types.h>
 
 #define MEMORYPOOL_SIZE (CONFIG_MEMORYPOOL_SIZE)
 

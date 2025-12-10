@@ -1,9 +1,9 @@
-#include <../kernel/TaskList.h>
+#include <../kernel/task_list.h>
 #include <stddef.h>
-#include <zhiyec/Assert.h>
-#include <zhiyec/Mutex.h>
-#include <zhiyec/Semaphore.h>
-#include <zhiyec/Task.h>
+#include <zhiyec/assert.h>
+#include <zhiyec/mutex.h>
+#include <zhiyec/semaphore.h>
+#include <zhiyec/task.h>
 
 struct Mutex {
     /* 基于信号量 */

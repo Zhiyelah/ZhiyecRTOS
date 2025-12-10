@@ -1,5 +1,5 @@
 /**
- * @file TaskList.h
+ * @file task_list.h
  * @author Zhiyelah
  * @brief 任务列表
  */
@@ -8,8 +8,8 @@
 #define _ZHIYEC_TASKLIST_H
 
 #include <stdbool.h>
-#include <zhiyec/List.h>
-#include <zhiyec/Task.h>
+#include <zhiyec/list.h>
+#include <zhiyec/task.h>
 
 extern struct QueueList kernel_task_list[TASKTYPE_NUM];
 

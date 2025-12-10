@@ -1,5 +1,5 @@
-#include <zhiyec/Task.h>
-#include <zhiyec/Tick.h>
+#include <zhiyec/task.h>
+#include <zhiyec/tick.h>
 
 volatile tick_t kernel_ticks = 0U;
 

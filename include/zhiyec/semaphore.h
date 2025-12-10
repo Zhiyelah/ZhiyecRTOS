@@ -1,5 +1,5 @@
 /**
- * @file Semaphore.h
+ * @file semaphore.h
  * @author Zhiyelah
  * @brief 信号量
  * @note 可选的模块

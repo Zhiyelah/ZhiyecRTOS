@@ -1,5 +1,5 @@
 /**
- * @file Port.h
+ * @file port.h
  * @author Zhiyelah
  * @brief 内核外设接口
  */
@@ -7,9 +7,9 @@
 #ifndef _ZHIYEC_PORT_H
 #define _ZHIYEC_PORT_H
 
-#include <Config.h>
+#include <config.h>
 #include <stdint.h>
-#include <zhiyec/Types.h>
+#include <zhiyec/types.h>
 
 /**
  * @brief 禁用中断

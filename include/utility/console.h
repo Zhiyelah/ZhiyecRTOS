@@ -1,5 +1,5 @@
 /**
- * @file Console.h
+ * @file console.h
  * @author Zhiyelah
  * @brief 控制台支持
  * @note 可通过终端模式下的串口工具与MCU交互

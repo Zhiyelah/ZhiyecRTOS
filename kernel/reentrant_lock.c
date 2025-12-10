@@ -1,7 +1,7 @@
-#include <zhiyec/Assert.h>
-#include <zhiyec/Mutex.h>
-#include <zhiyec/ReentrantLock.h>
-#include <zhiyec/Task.h>
+#include <zhiyec/assert.h>
+#include <zhiyec/mutex.h>
+#include <zhiyec/reentrant_lock.h>
+#include <zhiyec/task.h>
 
 struct ReentrantLock {
     /* 基于互斥锁 */

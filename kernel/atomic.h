@@ -1,5 +1,5 @@
 /**
- * @file Atomic.h
+ * @file atomic.h
  * @author Zhiyelah
  * @brief 原子操作支持
  */
@@ -7,7 +7,7 @@
 #ifndef _ZHIYEC_ATOMIC_H
 #define _ZHIYEC_ATOMIC_H
 
-#include <../kernel/Port.h>
+#include <../kernel/port.h>
 
 /**
  * @brief 开始原子操作

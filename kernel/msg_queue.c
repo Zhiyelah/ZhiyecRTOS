@@ -1,9 +1,9 @@
-#include <../kernel/Atomic.h>
-#include <../kernel/TaskList.h>
+#include <../kernel/atomic.h>
+#include <../kernel/task_list.h>
 #include <string.h>
-#include <zhiyec/Assert.h>
-#include <zhiyec/List.h>
-#include <zhiyec/MsgQueue.h>
+#include <zhiyec/assert.h>
+#include <zhiyec/list.h>
+#include <zhiyec/msg_queue.h>
 
 struct MsgQueue {
     /* 数据缓冲区 */

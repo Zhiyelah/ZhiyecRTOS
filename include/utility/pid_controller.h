@@ -1,5 +1,5 @@
 /**
- * @file PIDController.h
+ * @file pid_controller.h
  * @author Zhiyelah
  * @brief PID控制器
  * @note 简单的控制算法
