@@ -15,6 +15,9 @@
 #include <zhiyec/list.h>
 #include <zhiyec/types.h>
 
+/* 内存字节对齐位 */
+#define BYTE_ALIGNMENT 8
+
 enum TaskType {
     /* 普通任务 */
     COMMON_TASK = 0U,
@@ -118,7 +121,7 @@ void Task_sleepUntil(tick_t *const prev_wake_time, const tick_t interval);
 /**
  * @brief 在任务中调用, 删除当前任务
  */
-void Task_deleteSelf(void);
+void Task_deleteLater(void);
 
 /**
  * @brief 获取任务个数

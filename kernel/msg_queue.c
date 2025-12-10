@@ -56,7 +56,7 @@ struct MsgQueue *MsgQueue_init(void *const msg_queue_mem,
 /* 检查队列是否已满 */
 #define MsgQueue_isFull(msg_queue) ((msg_queue)->queue_count == (msg_queue)->buffer_size)
 
-static inline void MsgQueue_sendHelper(struct MsgQueue *const msg_queue, const void *const data) {
+static inline void MsgQueue_doSend(struct MsgQueue *const msg_queue, const void *const data) {
     /* 往消息队列添加消息 */
     unsigned char *const writer = (unsigned char *)(msg_queue->buffer) + (msg_queue->type_size * msg_queue->queue_tail);
     memcpy(writer, data, msg_queue->type_size);
@@ -97,7 +97,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
     }
 
     atomic({
-        MsgQueue_sendHelper(msg_queue, data);
+        MsgQueue_doSend(msg_queue, data);
     });
 
     return true;
@@ -113,15 +113,15 @@ bool MsgQueue_sendFromISR(struct MsgQueue *const msg_queue, const void *const da
     }
 
     uint32_t prev_basepri = Port_disableInterruptFromISR();
-    MsgQueue_sendHelper(msg_queue, data);
+    MsgQueue_doSend(msg_queue, data);
     Port_enableInterruptFromISR(prev_basepri);
 
     return true;
 }
 
 /* 接收消息 */
-static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const data,
-                                   const bool has_timeout, tick_t timeout) {
+static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const data,
+                               const bool has_timeout, tick_t timeout) {
     if ((msg_queue == NULL) || (data == NULL)) {
         return false;
     }
@@ -206,10 +206,10 @@ static bool MsgQueue_receiveHelper(struct MsgQueue *const msg_queue, void *const
 }
 
 void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data) {
-    (void)MsgQueue_receiveHelper(msg_queue, data, false, 0);
+    (void)MsgQueue_doReceive(msg_queue, data, false, 0);
 }
 
 bool MsgQueue_tryReceive(struct MsgQueue *const msg_queue, void *const data,
                          const tick_t timeout) {
-    return MsgQueue_receiveHelper(msg_queue, data, true, timeout);
+    return MsgQueue_doReceive(msg_queue, data, true, timeout);
 }

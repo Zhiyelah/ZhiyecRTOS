@@ -9,6 +9,7 @@
 
 #include <config.h>
 #include <stdint.h>
+#include <zhiyec/compiler.h>
 #include <zhiyec/types.h>
 
 /**
@@ -17,7 +18,7 @@
 static inline void Port_disableInterrupt() {
     extern volatile int interrupt_disabled_nesting;
 
-    uint32_t new_basepri = CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY;
+    uint32_t new_basepri = CONFIG_SHIELDABLE_INTERRUPT_MAX_PRIORITY;
     __asm {
         msr basepri, new_basepri
         dsb
@@ -74,8 +75,8 @@ static inline void Port_enableInterrupt() {
 #define Port_yield()                         \
     do {                                     \
         Interrupt_CTRL_Reg = PendSV_SET_Bit; \
-        __dsb(0U);                           \
-        __isb(0U);                           \
+        DSB();                               \
+        ISB();                               \
     } while (0)
 
 #define SysTick_LOAD_Reg (*((volatile uint32_t *)0xe000e014))

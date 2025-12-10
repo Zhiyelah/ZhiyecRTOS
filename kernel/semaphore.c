@@ -2,6 +2,7 @@
 #include <../kernel/task_list.h>
 #include <stddef.h>
 #include <zhiyec/assert.h>
+#include <zhiyec/compiler.h>
 #include <zhiyec/list.h>
 #include <zhiyec/semaphore.h>
 
@@ -64,7 +65,7 @@ void Semaphore_acquire(struct Semaphore *const sem) {
         }
     });
 
-    __dmb(0U);
+    DMB();
 }
 
 /* 尝试获得信号量, 超时后返回 */
@@ -101,7 +102,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
         continue;
     }
 
-    __dmb(0U);
+    DMB();
     return true;
 }
 
@@ -148,7 +149,7 @@ void Semaphore_release(struct Semaphore *const sem) {
         }
     });
 
-    __dmb(0U);
+    DMB();
 }
 
 /* 中断释放信号量 */

@@ -5,7 +5,6 @@
 #define SysTick_Handler_Port CONFIG_SYSTICK_HANDLER_PORT
 #define SVC_Handler_Port CONFIG_SVC_HANDLER_PORT
 #define PendSV_Handler_Port CONFIG_PENDSV_HANDLER_PORT
-#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
 #define SYSTICK_LOAD_REG_VALUE (CONFIG_CPU_CLOCK_HZ / CONFIG_SYSTICK_RATE_HZ)
 
 /* SysTick寄存器 */
@@ -56,7 +55,6 @@ stack_t *InitTaskStack_Port(stack_t *top_of_stack, void (*const fn)(void *), voi
 }
 
 __asm void StartFirstTask_Port() {
-    /* 8 字节对齐 */
     PRESERVE8
 
     extern kernel_current_task;
@@ -77,13 +75,10 @@ __asm void StartFirstTask_Port() {
 
     /* 加载寄存器 */
     pop {r0-r5}
-
     /* 使用r5作为lr寄存器 */
     mov lr, r5
-
     /* 返回地址保存在r3 */
     pop {r3}
-
     /* 弹出XPSR寄存器, 丢弃 */
     pop {r2}
 
@@ -95,8 +90,6 @@ __asm void StartFirstTask_Port() {
 }
 
 void SysTick_Handler_Port() {
-    /* 默认以特权模式执行 */
-
 #ifdef Hook_isrSysTickEntry
     Hook_isrSysTickEntry();
 #endif
@@ -111,26 +104,21 @@ void SysTick_Handler_Port() {
 }
 
 __asm void SVC_Handler_Port() {
-    /* 默认以特权模式执行 */
 }
 
 __asm void PendSV_Handler_Port() {
-    /* 默认以特权模式执行 */
-
-    /* 8 字节对齐 */
     PRESERVE8
 
+    /* 获取进程堆栈指针 */
     mrs r0, psp
-
-    extern kernel_current_task;
-
-    ldr r3, =kernel_current_task
-    ldr r2, [r3]
 
     /* 为低位寄存器预留空间 */
     subs r0, #32
 
-    /* 将进程堆栈指针保存到最近任务的堆栈指针 */
+    /* 保存当前堆栈 */
+    extern kernel_current_task;
+    ldr r3, =kernel_current_task
+    ldr r2, [r3]
     str r0, [r2]
 
     /* 保存低位寄存器 */
@@ -142,38 +130,26 @@ __asm void PendSV_Handler_Port() {
     mov r7, r11
     stmia r0!, {r4-r7}
 
-    /* 将最近任务的地址和lr保存到内核堆栈MSP中 */
+    /* 选择下一个任务 */
     push {r3, lr}
-
-    /* 屏蔽中断 */
     cpsid i
     extern Task_switchNextTask;
-    /* 跳转到任务切换函数 */
     bl Task_switchNextTask
-    /* 恢复中断 */
     cpsie i
-
     /* r2存放最近任务的地址, r3存放lr寄存器 */
     pop {r2, r3}
 
-    /* 重新从最近任务中读取栈顶指针 */
+    /* 恢复下一个任务的堆栈 */
     ldr r0, [r2]
     ldr r0, [r0]
-
-    /* 偏移到高位寄存器 */
-    adds r0, #16
-    /* 从任务栈中加载对应寄存器 */
+    adds r0, #16  /* 偏移到高位寄存器 */
     ldmia r0!, {r4-r7}
     mov r8, r4
     mov r9, r5
     mov r10, r6
     mov r11, r7
-
-    /* 将栈顶指针更新到PSP寄存器 */
     msr psp, r0
-
-    /* 加载低位寄存器 */
-    subs r0, #32
+    subs r0, #32  /* 偏移到低位寄存器 */
     ldmia r0!, {r4-r7}
 
     /* 跳转执行 */

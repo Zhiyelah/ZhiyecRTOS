@@ -36,7 +36,7 @@ struct TaskStruct *Mutex_getOwner(struct Mutex *const mutex) {
     return mutex->owner;
 }
 
-static inline void Mutex_lockHelper(struct Mutex *const mutex) {
+static inline void Mutex_doLock(struct Mutex *const mutex) {
     mutex->owner = Task_currentTask();
     mutex->owner_type = Task_getType(mutex->owner);
 
@@ -52,12 +52,12 @@ static inline void Mutex_lockHelper(struct Mutex *const mutex) {
 
 void Mutex_lock(struct Mutex *const mutex) {
     Semaphore_acquire(mutex->sem);
-    Mutex_lockHelper(mutex);
+    Mutex_doLock(mutex);
 }
 
 bool Mutex_tryLock(struct Mutex *const mutex, const tick_t timeout) {
     if (Semaphore_tryAcquire(mutex->sem, timeout)) {
-        Mutex_lockHelper(mutex);
+        Mutex_doLock(mutex);
         return true;
     }
     return false;

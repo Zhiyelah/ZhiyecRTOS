@@ -2,14 +2,12 @@
 #include <../kernel/hook.h>
 #include <../kernel/task_list.h>
 #include <stddef.h>
+#include <zhiyec/compiler.h>
 #include <zhiyec/list.h>
 #include <zhiyec/task.h>
 #include <zhiyec/tick.h>
 
-/* 内存字节对齐位 */
-#define BYTE_ALIGNMENT 8
-
-#define MANAGED_INTERRUPT_MAX_PRIORITY (CONFIG_MANAGED_INTERRUPT_MAX_PRIORITY)
+#define SYSCALL_INTERRUPT_MAX_PRIORITY (CONFIG_SYSCALL_INTERRUPT_MAX_PRIORITY)
 
 #define DEFAULT_TASK_STACK_SIZE (CONFIG_DEFAULT_TASK_STACK_SIZE)
 #define TASK_MAX_NUM (CONFIG_TASK_MAX_NUM)
@@ -39,8 +37,8 @@ static bool blocked_task_list_ready_switch_next_cycle = false;
 /* 等待删除任务列表 */
 static struct StackList to_delete_task_list;
 
-static inline struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack);
-static inline void Task_deleteTaskStruct(struct TaskStruct *const task);
+static FORCE_INLINE struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack);
+static FORCE_INLINE void Task_deleteTaskStruct(struct TaskStruct *const task);
 
 /* 创建任务 */
 bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr) {
@@ -164,7 +162,7 @@ static inline void Task_insertBlockedList(struct StackList *blocked_list,
 }
 
 /* 将当前任务阻塞 */
-static inline void Task_sleepHelper(const tick_t resume_time) {
+static inline void Task_doSleep(const tick_t resume_time) {
     atomic({
         struct SListHead *const front_node = TaskList_removeFront(kernel_current_task->type);
 
@@ -185,29 +183,29 @@ static inline void Task_sleepHelper(const tick_t resume_time) {
     Task_yield();
 }
 
-/* 任务睡眠 */
+/* 添加任务到阻塞列表 */
 void Task_sleep(const tick_t ticks) {
     if (ticks > 0U) {
-        Task_sleepHelper(Tick_currentTicks() + ticks);
+        Task_doSleep(Tick_currentTicks() + ticks);
     } else {
         Task_yield();
     }
 }
 
-/* 任务周期睡眠 */
+/* 使任务周期性执行 */
 void Task_sleepUntil(tick_t *const prev_wake_time, const tick_t interval) {
     const tick_t resume_time = (*prev_wake_time) + interval;
 
     /* 如果任务执行时间小于周期, 阻塞任务 */
     if (!Tick_after(Tick_currentTicks(), resume_time)) {
-        Task_sleepHelper(resume_time);
+        Task_doSleep(resume_time);
     }
 
     *prev_wake_time = resume_time;
 }
 
-/* 任务删除自身 */
-void Task_deleteSelf() {
+/* 添加任务到删除列表 */
+void Task_deleteLater() {
     atomic({
         struct SListHead *const front_node = TaskList_removeFront(kernel_current_task->type);
 
@@ -231,7 +229,7 @@ void Task_suspendAll() {
         ++task_suspended_count;
     });
 
-    __dmb(0U);
+    DMB();
 }
 
 /* 恢复所有任务 */
@@ -286,7 +284,7 @@ int Task_schedule() {
     };
     if (Task_create(kernelIdleTask, NULL, &idle_task_attr)) {
         /* 屏蔽中断 */
-        uint32_t new_basepri = MANAGED_INTERRUPT_MAX_PRIORITY;
+        uint32_t new_basepri = SYSCALL_INTERRUPT_MAX_PRIORITY;
         __asm {
             msr basepri, new_basepri
             dsb
@@ -306,7 +304,7 @@ int Task_schedule() {
 }
 
 /* 创建任务对象 */
-static inline struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack) {
+static FORCE_INLINE struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_t *const top_of_stack) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     struct TaskStruct *new_task = Memory_alloc(sizeof(struct TaskStruct));
     if (new_task != NULL) {
@@ -344,7 +342,7 @@ static inline struct TaskStruct *Task_newTaskStruct(stack_t *const stack, stack_
 }
 
 /* 删除任务对象 */
-static inline void Task_deleteTaskStruct(struct TaskStruct *const task) {
+static FORCE_INLINE void Task_deleteTaskStruct(struct TaskStruct *const task) {
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
     Memory_free(task);
 #else
@@ -392,7 +390,7 @@ bool Task_needSwitch() {
 
 /* 当任务函数返回时会回到这个函数 */
 void TaskReturnHandler() {
-    Task_deleteSelf();
+    Task_deleteLater();
 
     for (;;) {
     }
