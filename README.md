@@ -27,16 +27,8 @@ void doSomethingTask(void *arg) {
 }
 
 int main() {
-    /* 定义任务属性 */
-    struct TaskAttribute do_something_task_attr = {
-        .stack = do_something_task_stack,
-        .stack_size = sizeof(do_something_task_stack)/sizeof(do_something_task_stack[0]),
-        .type = COMMON_TASK, /* COMMON_TASK 或 REALTIME_TASK */
-    };
-    /* 或者也可以这样来定义任务属性
-       TaskAttribute_def(do_something_task_attr, do_something_task_stack, COMMON_TASK); */
-
     /* 创建任务 */
+    TaskAttribute_def(do_something_task_attr, do_something_task_stack, COMMON_TASK);
     Task_create(doSomethingTask, NULL, &do_something_task_attr);
 
     /* 开始调度任务 */
@@ -45,6 +37,5 @@ int main() {
 ```
 
 #### 特别说明
-1. 支持 C99 及以上标准
-2. 一些模块是可选的，如果不开启 **动态内存分配** 则不需要添加 **`Memory`** 模块
-3. 任务函数 **返回** 后会自动删除该任务
+1. 需要 **C99** 及以上标准和 **GNU** 扩展
+2. 任务函数 **返回** 后会自动删除该任务
