@@ -17,7 +17,7 @@ git clone https://github.com/Zhiyelah/ZhiyecRTOS.git
 #include <zhiyec/task.h>
 
 stack_t do_something_task_stack[128];
-void doSomethingTask(void *arg) {
+void do_something_task(void *arg) {
     /* 初始化 */
     (void)arg;
 
@@ -29,7 +29,7 @@ void doSomethingTask(void *arg) {
 int main() {
     /* 创建任务 */
     TaskAttribute_def(do_something_task_attr, do_something_task_stack, COMMON_TASK);
-    Task_create(doSomethingTask, NULL, &do_something_task_attr);
+    Task_create(do_something_task, NULL, &do_something_task_attr);
 
     /* 开始调度任务 */
     return Task_schedule();
