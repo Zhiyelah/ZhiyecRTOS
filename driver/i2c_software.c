@@ -1,4 +1,5 @@
 #include <driver/i2c_software.h>
+#include <utility/delay.h>
 
 #define HIGH 0x01
 #define LOW 0x00
@@ -31,20 +32,20 @@ static __forceinline void I2C_Software_stop(I2C_Software_Interface *i2c_software
  * @return true: 收到应答; false: 未收到应答
  */
 static __forceinline bool I2C_Software_waitAck(I2C_Software_Interface *i2c_software_interface,
-                                               Time_t wait_us) {
+                                               uint32_t wait_us) {
     i2c_software_interface->writeSDA(HIGH);
 
     i2c_software_interface->writeSCL(HIGH);
 
     while (i2c_software_interface->readSDA()) {
-        Time_t timeout = 0;
+        uint32_t timeout = 0;
 
         timeout++;
         if (timeout > wait_us) {
             I2C_Software_stop(i2c_software_interface);
             return false;
         }
-        Time_delayUs(1);
+        Delay_us(1);
     }
 
     i2c_software_interface->writeSCL(LOW);
@@ -120,7 +121,7 @@ bool I2C_Software_write(I2C_Software_Interface *i2c_software_interface,
                         uint8_t reg_addr,
                         uint8_t *data,
                         uint16_t len,
-                        Time_t wait_ack_us) {
+                        uint32_t wait_ack_us) {
 
     I2C_Software_start(i2c_software_interface);
 
@@ -160,7 +161,7 @@ bool I2C_Software_read(I2C_Software_Interface *i2c_software_interface,
                        uint8_t reg_addr,
                        uint8_t *data,
                        uint16_t len,
-                       Time_t wait_ack_us) {
+                       uint32_t wait_ack_us) {
 
     I2C_Software_start(i2c_software_interface);
 

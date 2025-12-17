@@ -4,15 +4,14 @@
  * @brief 软件模拟I2C通信
  */
 
-#ifndef _I2C_Sortware_h
-#define _I2C_Sortware_h
+#ifndef _I2C_SOFTWARE_H
+#define _I2C_SOFTWARE_H
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <utility/time.h>
 
 /**
- *  引脚初始化
+ * [引脚初始化]
  * 将SCL和SDA引脚设置为开漏输出, 并初始设置为高电平(高阻态)
  */
 
@@ -45,7 +44,7 @@ bool I2C_Software_write(I2C_Software_Interface *i2c_software_interface,
                         uint8_t reg_addr,
                         uint8_t *data,
                         uint16_t len,
-                        Time_t wait_ack_us);
+                        uint32_t wait_ack_us);
 
 /**
  * @brief 从I2C设备读取数据
@@ -64,6 +63,6 @@ bool I2C_Software_read(I2C_Software_Interface *i2c_software_interface,
                        uint8_t reg_addr,
                        uint8_t *data,
                        uint16_t len,
-                       Time_t wait_ack_us);
+                       uint32_t wait_ack_us);
 
-#endif /* _I2C_Sortware_h */
+#endif /* _I2C_SOFTWARE_H */

@@ -74,7 +74,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
         return false;
     }
 
-    tick_t current_tick = Tick_currentTicks();
+    tick_t current_tick = Tick_current();
 
     atomic({
         --(sem->state);
@@ -84,13 +84,13 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
     while (sem->state < 0) {
 
         if (timeout > 0) {
-            if (!Tick_after(Tick_currentTicks(),
+            if (!Tick_after(Tick_current(),
                             current_tick + 1)) {
                 Task_yield();
                 continue;
             }
 
-            current_tick = Tick_currentTicks();
+            current_tick = Tick_current();
 
             --timeout;
         }

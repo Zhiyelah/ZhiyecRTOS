@@ -1,5 +1,11 @@
-#ifndef _SingleKey_h
-#define _SingleKey_h
+/**
+ * @file single_key.h
+ * @author Zhiyelah
+ * @brief 多状态按键检测
+ */
+
+#ifndef _SINGLE_KEY_H
+#define _SINGLE_KEY_H
 
 #include <stdbool.h>
 
@@ -26,4 +32,4 @@ struct SingleKey {
 
 void Key_pressedEvent(struct SingleKey *single_key);
 
-#endif /* _SingleKey_h */
+#endif /* _SINGLE_KEY_H */

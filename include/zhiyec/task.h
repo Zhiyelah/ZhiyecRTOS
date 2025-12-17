@@ -11,6 +11,7 @@
 #include <config.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zhiyec/compiler.h>
 #include <zhiyec/kernel.h>
 #include <zhiyec/list.h>
 #include <zhiyec/types.h>
@@ -152,7 +153,7 @@ extern struct TaskStruct *volatile kernel_current_task;
  * @param task 任务指针
  * @return 任务类型
  */
-static inline enum TaskType Task_getType(const struct TaskStruct *const task) {
+static always_inline enum TaskType Task_getType(const struct TaskStruct *const task) {
     return task->type;
 }
 
@@ -161,7 +162,7 @@ static inline enum TaskType Task_getType(const struct TaskStruct *const task) {
  * @param task 任务指针
  * @param type 任务类型
  */
-static inline void Task_setType(struct TaskStruct *const task, const enum TaskType type) {
+static always_inline void Task_setType(struct TaskStruct *const task, const enum TaskType type) {
     task->type = type;
 }
 
@@ -170,15 +171,9 @@ static inline void Task_setType(struct TaskStruct *const task, const enum TaskTy
  * @param node 任务节点
  * @return 节点所在任务
  */
-static inline struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node) {
+static always_inline struct TaskStruct *Task_fromTaskNode(const struct SListHead *const node) {
     return container_of(node, struct TaskStruct, task_node);
 }
-
-/**
- * @brief 更新内核Tick和任务状态
- * @return 是否需要切换任务
- */
-bool Task_needSwitch(void);
 
 /**
  * @brief 让出CPU

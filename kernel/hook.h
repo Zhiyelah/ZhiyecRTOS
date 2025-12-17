@@ -16,7 +16,4 @@
 /* 空闲任务钩子 */
 #define Hook_idleTaskRunning() ((void)0)
 
-/* 任务删除钩子 */
-#define Hook_taskDeletion(task) ((void)0)
-
 #endif /* _ZHIYEC_HOOK_H */

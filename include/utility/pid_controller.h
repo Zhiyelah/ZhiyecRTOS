@@ -5,8 +5,8 @@
  * @note 简单的控制算法
  */
 
-#ifndef _PIDController_h
-#define _PIDController_h
+#ifndef _PID_CONTROLLER_H
+#define _PID_CONTROLLER_H
 
 struct PIDController;
 
@@ -49,4 +49,4 @@ float PIDController_calculateOutput(struct PIDController *const pid,
  */
 float PIDController_getOutput(const struct PIDController *const pid);
 
-#endif /* _PIDController_h */
+#endif /* _PID_CONTROLLER_H */

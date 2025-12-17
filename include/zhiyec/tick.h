@@ -18,7 +18,7 @@ extern volatile tick_t kernel_ticks;
 /**
  * @brief 获取当前ticks
  */
-#define Tick_currentTicks() ((tick_t)kernel_ticks)
+#define Tick_current() ((tick_t)kernel_ticks)
 
 /**
  * @brief 毫秒转ticks

@@ -8,13 +8,14 @@
 #define _ZHIYEC_TASKLIST_H
 
 #include <stdbool.h>
+#include <zhiyec/compiler.h>
 #include <zhiyec/list.h>
 #include <zhiyec/task.h>
 
 extern struct QueueList kernel_task_list[TASKTYPE_NUM];
 
 /* 任务列表是否已初始化 */
-static inline bool TaskList_isInit() {
+static always_inline bool TaskList_isInit() {
     return kernel_task_list->tail != NULL;
 }
 
@@ -26,11 +27,11 @@ static inline void TaskList_init() {
 }
 
 /* 将节点添加到列表尾部 */
-static inline void TaskList_append(const enum TaskType type, struct SListHead *const node) {
+static always_inline void TaskList_append(const enum TaskType type, struct SListHead *const node) {
     QueueList_push(kernel_task_list[type], node);
 }
 
-static inline void TaskList_insertFront(const enum TaskType type, struct SListHead *const node) {
+static always_inline void TaskList_insertFront(const enum TaskType type, struct SListHead *const node) {
     struct QueueList *const list = &(kernel_task_list[type]);
 
     node->next = list->head.next;
@@ -42,7 +43,7 @@ static inline void TaskList_insertFront(const enum TaskType type, struct SListHe
 }
 
 /* 将列表的头节点移除并返回它 */
-static inline struct SListHead *TaskList_removeFront(const enum TaskType type) {
+static always_inline struct SListHead *TaskList_removeFront(const enum TaskType type) {
     struct QueueList *const list = &(kernel_task_list[type]);
 
     if (QueueList_isEmpty(*list)) {
@@ -57,12 +58,12 @@ static inline struct SListHead *TaskList_removeFront(const enum TaskType type) {
 }
 
 /* 任务列表是否有任务 */
-static inline bool TaskList_hasTask(const enum TaskType type) {
+static always_inline bool TaskList_hasTask(const enum TaskType type) {
     return !QueueList_isEmpty(kernel_task_list[type]);
 }
 
 /* 获取任务列表第一个任务 */
-static inline struct TaskStruct *TaskList_getFrontTask(const enum TaskType type) {
+static always_inline struct TaskStruct *TaskList_getFrontTask(const enum TaskType type) {
     if (QueueList_isEmpty(kernel_task_list[type])) {
         return NULL;
     }

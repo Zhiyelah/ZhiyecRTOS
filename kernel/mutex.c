@@ -25,10 +25,10 @@ struct Mutex *Mutex_init(void *const mutex_mem) {
     mutex->owner = NULL;
     mutex->owner_type = COMMON_TASK;
 
-    /* 获取为信号量分配的内存 */
+    /* 初始化信号量 */
     void *sem_mem = mutex + 1;
-
     mutex->sem = Semaphore_initBinary(sem_mem);
+
     return mutex;
 }
 
@@ -75,7 +75,6 @@ void Mutex_unlock(struct Mutex *const mutex) {
         Task_resumeAll();
 
         mutex->owner = NULL;
-
         Semaphore_release(mutex->sem);
     }
 }

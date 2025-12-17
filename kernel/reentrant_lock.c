@@ -20,10 +20,10 @@ struct ReentrantLock *ReentrantLock_init(void *const lock_mem) {
     struct ReentrantLock *lock = (struct ReentrantLock *)lock_mem;
     lock->state = 0;
 
-    /* 获取为互斥锁分配的内存 */
+    /* 初始化互斥锁 */
     void *mutex_mem = lock + 1;
-
     lock->mutex = Mutex_init(mutex_mem);
+
     return lock;
 }
 

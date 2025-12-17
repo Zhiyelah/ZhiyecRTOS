@@ -126,7 +126,7 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
         return false;
     }
 
-    tick_t current_tick = Tick_currentTicks();
+    tick_t current_tick = Tick_current();
 
     atomic({
         ++(msg_queue->task_count);
@@ -145,13 +145,13 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
         if (has_timeout) {
 
             if (timeout > 0) {
-                if (!Tick_after(Tick_currentTicks(),
+                if (!Tick_after(Tick_current(),
                                 current_tick + 1)) {
                     Task_yield();
                     continue;
                 }
 
-                current_tick = Tick_currentTicks();
+                current_tick = Tick_current();
 
                 --timeout;
             }

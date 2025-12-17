@@ -7,9 +7,9 @@
 #define COMMAND_MAX_ARGS 8       // 最大参数数量
 #define PROMPT_STRING "zhiyec> " // 命令提示符
 
-#include <utility/printf.h>
+#include <utility/fmt.h>
 /* 控制台输出 */
-#define Console_printf(...) Printf(__VA_ARGS__)
+#define Console_printf(...) fmt_printf(__VA_ARGS__)
 
 /* 输入缓存区 */
 static char input_buffer[INPUT_BUFFER_SIZE];

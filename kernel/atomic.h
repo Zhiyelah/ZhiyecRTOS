@@ -22,10 +22,11 @@
 /**
  * @brief 原子操作块
  */
-#define atomic(code_block)         \
-    do {                           \
-        Atomic_begin();            \
-        {code_block} Atomic_end(); \
+#define atomic(code_block) \
+    do {                   \
+        Atomic_begin();    \
+        {code_block}       \
+        Atomic_end();      \
     } while (0)
 
 #endif /* _ZHIYEC_ATOMIC_H */

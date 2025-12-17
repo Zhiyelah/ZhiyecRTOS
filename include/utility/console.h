@@ -5,8 +5,8 @@
  * @note 可通过终端模式下的串口工具与MCU交互
  */
 
-#ifndef _Console_h
-#define _Console_h
+#ifndef _CONSOLE_H
+#define _CONSOLE_H
 
 struct ConsoleCommand {
     const char *name;                       // 命令名称
@@ -26,4 +26,4 @@ void Console_process(char ch);
  */
 void Console_registerCommand(const struct ConsoleCommand *const cmd);
 
-#endif /* _Console_h */
+#endif /* _CONSOLE_H */
