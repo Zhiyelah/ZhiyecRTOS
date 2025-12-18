@@ -17,7 +17,7 @@ struct MsgQueue {
     /* 等待接收消息的任务 */
     struct StackList tasks_waiting_to_receive;
     /* 等待接收消息的任务数 */
-    size_t task_count;
+    volatile size_t task_waiting_to_receive_count;
 
     /* 队头指针（出队位置） */
     size_t queue_head;
@@ -43,7 +43,7 @@ struct MsgQueue *MsgQueue_init(void *const msg_queue_mem,
     msg_queue->type_size = type_size;
     StackList_init(msg_queue->tasks_waiting_to_send);
     StackList_init(msg_queue->tasks_waiting_to_receive);
-    msg_queue->task_count = 0U;
+    msg_queue->task_waiting_to_receive_count = 0U;
     msg_queue->queue_head = 0U;
     msg_queue->queue_tail = 0U;
     msg_queue->queue_count = 0U;
@@ -80,19 +80,18 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
     }
 
     while (true) {
-        Atomic_begin();
         if (!MsgQueue_isFull(msg_queue)) {
-            Atomic_end();
             break;
         }
 
+        Task_suspendAll();
         struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
         if (front_node) {
             StackList_push(msg_queue->tasks_waiting_to_send, front_node);
         }
 
-        Atomic_end();
+        Task_resumeAll();
         Task_yield();
     }
 
@@ -129,36 +128,29 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
     tick_t current_tick = Tick_current();
 
     atomic({
-        ++(msg_queue->task_count);
+        ++(msg_queue->task_waiting_to_receive_count);
     });
 
     while (true) {
-        Atomic_begin();
         /* 有消息, 直接接收 */
         if (!MsgQueue_isEmpty(msg_queue)) {
-            Atomic_end();
             break;
         }
-        Atomic_end();
 
         /* 超时处理 */
         if (has_timeout) {
 
             if (timeout > 0) {
-                if (!Tick_after(Tick_current(),
-                                current_tick + 1)) {
+                if (!Tick_after(Tick_current(), current_tick + 1)) {
                     Task_yield();
                     continue;
                 }
 
                 current_tick = Tick_current();
-
                 --timeout;
-            }
-
-            if (timeout == 0) {
+            } else {
                 atomic({
-                    --(msg_queue->task_count);
+                    --(msg_queue->task_waiting_to_receive_count);
                 });
                 return false;
             }
@@ -166,39 +158,43 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
             continue;
         }
 
-        atomic({
-            struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
+        Task_suspendAll();
+        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
-            if (front_node) {
-                StackList_push(msg_queue->tasks_waiting_to_receive, front_node);
-            }
-        });
+        if (front_node) {
+            StackList_push(msg_queue->tasks_waiting_to_receive, front_node);
+        }
 
+        Task_resumeAll();
         Task_yield();
     }
 
+    Task_suspendAll();
+
     atomic({
-        --(msg_queue->task_count);
-
-        /* 从消息队列中读取消息 */
-        const unsigned char *const reader = (unsigned char *)(msg_queue->buffer) + (msg_queue->type_size * msg_queue->queue_head);
-        memcpy(data, reader, msg_queue->type_size);
-
-        if (msg_queue->task_count == 0U) {
-            msg_queue->queue_head = (msg_queue->queue_head + 1) % msg_queue->buffer_size;
-            --(msg_queue->queue_count);
-
-            /* 唤醒一个等待发送消息的任务 */
-            if (!StackList_isEmpty(msg_queue->tasks_waiting_to_send)) {
-                struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_send);
-                StackList_pop(msg_queue->tasks_waiting_to_send);
-
-                TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
-            }
-        }
+        --(msg_queue->task_waiting_to_receive_count);
     });
 
-    if (msg_queue->task_count != 0U) {
+    /* 从消息队列中读取消息 */
+    const unsigned char *const reader = (unsigned char *)(msg_queue->buffer) + (msg_queue->type_size * msg_queue->queue_head);
+    memcpy(data, reader, msg_queue->type_size);
+
+    if (msg_queue->task_waiting_to_receive_count == 0U) {
+        msg_queue->queue_head = (msg_queue->queue_head + 1) % msg_queue->buffer_size;
+        --(msg_queue->queue_count);
+
+        /* 唤醒一个等待发送消息的任务 */
+        if (!StackList_isEmpty(msg_queue->tasks_waiting_to_send)) {
+            struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_send);
+            StackList_pop(msg_queue->tasks_waiting_to_send);
+
+            TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
+        }
+    }
+
+    Task_resumeAll();
+
+    if (msg_queue->task_waiting_to_receive_count != 0U) {
         Task_yield();
     }
 

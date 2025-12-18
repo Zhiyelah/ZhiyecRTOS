@@ -40,20 +40,19 @@ bool EventGroup_listen(struct EventGroup *const event_group) {
     }
 
     while (true) {
-        Atomic_begin();
         /* 表示事件被触发 */
         if (event_group->events == 0U) {
-            Atomic_end();
             break;
         }
 
+        Task_suspendAll();
         struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
 
         if (front_node) {
             StackList_push(event_group->tasks_waiting_triggered, front_node);
         }
 
-        Atomic_end();
+        Task_resumeAll();
         Task_yield();
     }
 
@@ -76,18 +75,22 @@ void EventGroup_trigger(struct EventGroup *const event_group, const enum EventTy
         return;
     }
 
+    Task_suspendAll();
+
     atomic({
         event_group->events &= ~events;
-
-        if ((event_group->tri_logic == EVENT_TRIG_ANY) ||
-            (event_group->events == (enum EventType)0U)) {
-            event_group->events = (enum EventType)0U;
-            while (!StackList_isEmpty(event_group->tasks_waiting_triggered)) {
-                struct SListHead *const node = StackList_front(event_group->tasks_waiting_triggered);
-                StackList_pop(event_group->tasks_waiting_triggered);
-
-                TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
-            }
-        }
     });
+
+    if ((event_group->tri_logic == EVENT_TRIG_ANY) ||
+        (event_group->events == (enum EventType)0U)) {
+        event_group->events = (enum EventType)0U;
+        while (!StackList_isEmpty(event_group->tasks_waiting_triggered)) {
+            struct SListHead *const node = StackList_front(event_group->tasks_waiting_triggered);
+            StackList_pop(event_group->tasks_waiting_triggered);
+
+            TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
+        }
+    }
+
+    Task_resumeAll();
 }

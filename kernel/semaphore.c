@@ -52,18 +52,30 @@ void Semaphore_acquire(struct Semaphore *const sem) {
         return;
     }
 
+    bool need_yield = false;
+
+    Task_suspendAll();
+
     atomic({
         --(sem->state);
-
-        /* 没有信号量, 进入阻塞 */
-        if (sem->state < 0) {
-            struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
-
-            if (front_node) {
-                QueueList_push(sem->tasks_waiting_to_acquire, front_node);
-            }
-        }
     });
+
+    if (sem->state < 0) {
+        /* 进入阻塞 */
+        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
+
+        if (front_node) {
+            QueueList_push(sem->tasks_waiting_to_acquire, front_node);
+        }
+
+        need_yield = true;
+    }
+
+    Task_resumeAll();
+
+    if (need_yield) {
+        Task_yield();
+    }
 
     DMB();
 }
@@ -76,37 +88,63 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
 
     tick_t current_tick = Tick_current();
 
-    atomic({
-        --(sem->state);
-    });
-
     /* 超时处理 */
-    while (sem->state < 0) {
+    while (true) {
+        if (sem->state - 1 >= 0) {
+            atomic({
+                --(sem->state);
+            });
+            break;
+        }
 
         if (timeout > 0) {
-            if (!Tick_after(Tick_current(),
-                            current_tick + 1)) {
+            if (!Tick_after(Tick_current(), current_tick + 1)) {
                 Task_yield();
                 continue;
             }
 
             current_tick = Tick_current();
-
             --timeout;
-        }
-
-        if (timeout == 0) {
+        } else {
             return false;
         }
-
-        continue;
     }
 
     DMB();
     return true;
 }
 
-/* 中断获取信号量 */
+/* 释放信号量 */
+void Semaphore_release(struct Semaphore *const sem) {
+    if (sem == NULL) {
+        return;
+    }
+
+    Task_suspendAll();
+
+    atomic({
+        if (sem->state < sem->max_value) {
+            ++(sem->state);
+        }
+    });
+
+    if (sem->state <= 0) {
+
+        if (!QueueList_isEmpty(sem->tasks_waiting_to_acquire)) {
+            /* 唤醒一个等待获得信号量的任务 */
+            struct SListHead *const node = QueueList_front(sem->tasks_waiting_to_acquire);
+            QueueList_pop(sem->tasks_waiting_to_acquire);
+
+            TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
+        }
+    }
+
+    Task_resumeAll();
+
+    DMB();
+}
+
+/* 中断函数中获取信号量 */
 bool Semaphore_acquireFromISR(struct Semaphore *const sem) {
     if (sem == NULL) {
         return false;
@@ -126,33 +164,7 @@ bool Semaphore_acquireFromISR(struct Semaphore *const sem) {
     return return_value;
 }
 
-/* 释放信号量 */
-void Semaphore_release(struct Semaphore *const sem) {
-    if (sem == NULL) {
-        return;
-    }
-
-    atomic({
-        if (sem->state < sem->max_value) {
-            ++(sem->state);
-
-            if (sem->state <= 0) {
-
-                if (!QueueList_isEmpty(sem->tasks_waiting_to_acquire)) {
-                    /* 唤醒一个等待获得信号量的任务 */
-                    struct SListHead *const node = QueueList_front(sem->tasks_waiting_to_acquire);
-                    QueueList_pop(sem->tasks_waiting_to_acquire);
-
-                    TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
-                }
-            }
-        }
-    });
-
-    DMB();
-}
-
-/* 中断释放信号量 */
+/* 中断函数中释放信号量 */
 void Semaphore_releaseFromISR(struct Semaphore *const sem) {
     if (sem == NULL) {
         return;

@@ -47,17 +47,17 @@ void Semaphore_acquire(struct Semaphore *const sem);
 bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout);
 
 /**
+ * @brief 释放信号量
+ * @param sem 信号量对象
+ */
+void Semaphore_release(struct Semaphore *const sem);
+
+/**
  * @brief 获得信号量
  * @param sem 信号量对象
  * @note 中断安全的版本
  */
 bool Semaphore_acquireFromISR(struct Semaphore *const sem);
-
-/**
- * @brief 释放信号量
- * @param sem 信号量对象
- */
-void Semaphore_release(struct Semaphore *const sem);
 
 /**
  * @brief 释放信号量
