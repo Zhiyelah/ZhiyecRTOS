@@ -69,7 +69,7 @@ static inline void MsgQueue_doSend(struct MsgQueue *const msg_queue, const void 
         struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_receive);
         StackList_pop(msg_queue->tasks_waiting_to_receive);
 
-        TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
+        TaskList_append(Task_getPriority(Task_fromTaskNode(node)), node);
     }
 }
 
@@ -85,7 +85,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data) {
         }
 
         Task_suspendAll();
-        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
+        struct SListHead *const front_node = TaskList_removeFront(Task_getPriority(Task_currentTask()));
 
         if (front_node) {
             StackList_push(msg_queue->tasks_waiting_to_send, front_node);
@@ -125,7 +125,7 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
         return false;
     }
 
-    tick_t current_tick = Tick_current();
+    tick_t current_tick = Tick_currentTick();
 
     atomic({
         ++(msg_queue->task_waiting_to_receive_count);
@@ -141,12 +141,12 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
         if (has_timeout) {
 
             if (timeout > 0) {
-                if (!Tick_after(Tick_current(), current_tick + 1)) {
+                if (!Tick_after(Tick_currentTick(), current_tick + 1)) {
                     Task_yield();
                     continue;
                 }
 
-                current_tick = Tick_current();
+                current_tick = Tick_currentTick();
                 --timeout;
             } else {
                 atomic({
@@ -159,7 +159,7 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
         }
 
         Task_suspendAll();
-        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
+        struct SListHead *const front_node = TaskList_removeFront(Task_getPriority(Task_currentTask()));
 
         if (front_node) {
             StackList_push(msg_queue->tasks_waiting_to_receive, front_node);
@@ -188,7 +188,7 @@ static bool MsgQueue_doReceive(struct MsgQueue *const msg_queue, void *const dat
             struct SListHead *const node = StackList_front(msg_queue->tasks_waiting_to_send);
             StackList_pop(msg_queue->tasks_waiting_to_send);
 
-            TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
+            TaskList_append(Task_getPriority(Task_fromTaskNode(node)), node);
         }
     }
 

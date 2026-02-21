@@ -13,9 +13,9 @@
 static struct PrintStream current_out;
 static struct ReentrantLock *print_lock = ALLOCATE_STACK(ReentrantLock_byte);
 
-void fmt_setOut(struct PrintStream *print_stream) {
+void fmt_init(struct PrintStream *print_stream, const enum TaskPriority print_lock_ceiling_priority) {
     current_out = *print_stream;
-    ReentrantLock_init(print_lock);
+    ReentrantLock_init(print_lock, print_lock_ceiling_priority);
 }
 
 always_inline void fmt_print(const char *str) {

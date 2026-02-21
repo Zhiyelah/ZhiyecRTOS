@@ -4,17 +4,21 @@
  * @brief 格式化输入输出
  */
 
-#ifndef _PRINTF_H
-#define _PRINTF_H
+#ifndef _ZHIYEC_FMT_H
+#define _ZHIYEC_FMT_H
+
+#include <zhiyec/task.h>
 
 struct PrintStream {
     void (*write)(char);
 };
 
 /**
- * @brief 设置输出
+ * @brief 初始化fmt
+ * @param print_stream 打印流
+ * @param print_lock_ceiling_priority 打印锁的天花板优先级
  */
-void fmt_setOut(struct PrintStream *print_stream);
+void fmt_init(struct PrintStream *print_stream, const enum TaskPriority print_lock_ceiling_priority);
 
 /**
  * @brief 打印
@@ -31,4 +35,4 @@ void fmt_println(const char *str);
  */
 void fmt_printf(const char *format, ...);
 
-#endif /* _PRINTF_H */
+#endif /* _ZHIYEC_FMT_H */

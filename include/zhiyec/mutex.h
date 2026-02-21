@@ -9,6 +9,7 @@
 #define _ZHIYEC_MUTEX_H
 
 #include <stdbool.h>
+#include <zhiyec/task.h>
 #include <zhiyec/tick.h>
 
 struct Mutex;
@@ -18,9 +19,10 @@ struct Mutex;
 /**
  * @brief 初始化互斥锁
  * @param mutex_mem 对象内存指针
+ * @param ceiling_priority 天花板优先级(请求该锁的任务中最高的任务优先级)
  * @return 对象指针
  */
-struct Mutex *Mutex_init(void *const mutex_mem);
+struct Mutex *Mutex_init(void *const mutex_mem, const enum TaskPriority ceiling_priority);
 
 /**
  * @brief 获取所有者

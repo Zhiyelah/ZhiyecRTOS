@@ -19,14 +19,14 @@
 /* 内存字节对齐位 */
 #define BYTE_ALIGNMENT 8
 
-enum TaskType {
-    /* 普通任务 */
-    COMMON_TASK = 0U,
-    /* 实时任务 */
-    REALTIME_TASK,
+enum TaskPriority {
+    TASKPRIORITY_IDLE = 0U,
+    TASKPRIORITY_LOW,
+    TASKPRIORITY_MEDIUM,
+    TASKPRIORITY_HIGH,
 
     /* 枚举数量(必须是枚举的最后一位) */
-    TASKTYPE_NUM
+    TASKPRIORITY_NUM
 };
 
 enum SchedMethod {
@@ -37,53 +37,21 @@ enum SchedMethod {
 };
 
 struct TaskAttribute {
-    /**
-     * 任务类型, 可以是下列的其中一个:
-     *      COMMON_TASK,
-     *      REALTIME_TASK
-     */
-    enum TaskType type;
-
-    /**
-     * 调度方法, 仅对实时任务有效, 可以是下列的其中一个:
-     *      SCHED_RR,
-     *      SCHED_FIFO
-     */
+    /* 任务优先级 */
+    enum TaskPriority priority;
+    /* 调度方法 */
     enum SchedMethod sched_method;
-
-    /* 堆栈指针(在开启动态内存分配时可选择为空) */
-    stack_t *stack;
-
-    /* 堆栈大小 */
-    stack_t stack_size;
+    /* 任务销毁回调函数 */
+    void (*destroy)(stack_t *);
 };
-
-/**
- * @brief 任务属性结构体定义
- * @param _name 结构体变量名
- * @param _stack 任务栈指针
- * @param _type 任务类型
- */
-#define TaskAttribute_def(_name, _stack, _type)           \
-    struct TaskAttribute _name = {                        \
-        .stack = _stack,                                  \
-        .stack_size = sizeof(_stack) / sizeof(_stack[0]), \
-        .type = _type,                                    \
-    }
 
 struct TaskStruct {
     /* 栈顶指针(必须是结构体的第一个成员) */
     volatile stack_t *top_of_stack;
     /* 堆栈指针 */
     stack_t *stack;
-#if (USE_DYNAMIC_MEMORY_ALLOCATION)
-    /* 是否为动态分配栈 */
-    bool is_dynamic_stack;
-#endif
-    /* 任务类型 */
-    enum TaskType type;
-    /* 调度方法 */
-    enum SchedMethod sched_method;
+    /* 任务属性 */
+    struct TaskAttribute attr;
     /* 任务链表 */
     struct SListHead task_node;
     /* 恢复执行的时间 */
@@ -94,10 +62,13 @@ struct TaskStruct {
  * @brief 创建任务
  * @param fn 任务函数
  * @param arg 任务函数参数
+ * @param stack 任务栈指针
+ * @param stack_size 任务栈大小(单位: 字(word))
  * @param attr 任务属性
  * @note 线程安全
  */
-bool Task_create(void (*const fn)(void *), void *const arg, const struct TaskAttribute *attr);
+bool Task_create(void (*const fn)(void *), void *const arg, stack_t *const stack, const stack_t stack_size,
+                 const struct TaskAttribute *const attr);
 
 /**
  * @brief 开始调度任务, 不会执行到该函数下文
@@ -125,12 +96,6 @@ void Task_sleepUntil(tick_t *const prev_wake_time, const tick_t interval);
 void Task_deleteLater(void);
 
 /**
- * @brief 获取任务个数
- * @return 任务个数
- */
-size_t Task_getCount(void);
-
-/**
  * @brief 暂停所有任务
  */
 void Task_suspendAll(void);
@@ -149,21 +114,21 @@ extern struct TaskStruct *volatile kernel_current_task;
 #define Task_currentTask() (kernel_current_task)
 
 /**
- * @brief 获取任务的类型
+ * @brief 获取任务的优先级
  * @param task 任务指针
- * @return 任务类型
+ * @return 任务优先级
  */
-static always_inline enum TaskType Task_getType(const struct TaskStruct *const task) {
-    return task->type;
+static always_inline enum TaskPriority Task_getPriority(const struct TaskStruct *const task) {
+    return task->attr.priority;
 }
 
 /**
- * @brief 设置任务的类型
+ * @brief 设置任务的优先级
  * @param task 任务指针
- * @param type 任务类型
+ * @param priority 任务优先级
  */
-static always_inline void Task_setType(struct TaskStruct *const task, const enum TaskType type) {
-    task->type = type;
+static always_inline void Task_setPriority(struct TaskStruct *const task, const enum TaskPriority priority) {
+    task->attr.priority = priority;
 }
 
 /**

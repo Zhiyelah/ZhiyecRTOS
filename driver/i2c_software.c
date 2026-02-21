@@ -8,7 +8,7 @@
  * @brief  发送I2C起始信号
  * @param i2c_software_interface I2C读写接口
  */
-static __forceinline void I2C_Software_start(I2C_Software_Interface *i2c_software_interface) {
+static inline void I2C_Software_start(I2C_Software_Interface *i2c_software_interface) {
     i2c_software_interface->writeSDA(HIGH);
     i2c_software_interface->writeSCL(HIGH);
     i2c_software_interface->writeSDA(LOW);
@@ -19,7 +19,7 @@ static __forceinline void I2C_Software_start(I2C_Software_Interface *i2c_softwar
  * @brief  发送I2C停止信号
  * @param i2c_software_interface I2C读写接口
  */
-static __forceinline void I2C_Software_stop(I2C_Software_Interface *i2c_software_interface) {
+static inline void I2C_Software_stop(I2C_Software_Interface *i2c_software_interface) {
     i2c_software_interface->writeSDA(LOW);
     i2c_software_interface->writeSCL(HIGH);
     i2c_software_interface->writeSDA(HIGH);
@@ -31,8 +31,8 @@ static __forceinline void I2C_Software_stop(I2C_Software_Interface *i2c_software
  * @param wait_us 等待时间
  * @return true: 收到应答; false: 未收到应答
  */
-static __forceinline bool I2C_Software_waitAck(I2C_Software_Interface *i2c_software_interface,
-                                               uint32_t wait_us) {
+static inline bool I2C_Software_waitAck(I2C_Software_Interface *i2c_software_interface,
+                                        uint32_t wait_us) {
     i2c_software_interface->writeSDA(HIGH);
 
     i2c_software_interface->writeSCL(HIGH);
@@ -56,7 +56,7 @@ static __forceinline bool I2C_Software_waitAck(I2C_Software_Interface *i2c_softw
  * @brief  发送应答信号
  * @param i2c_software_interface I2C读写接口
  */
-static __forceinline void I2C_Software_sendAck(I2C_Software_Interface *i2c_software_interface) {
+static inline void I2C_Software_sendAck(I2C_Software_Interface *i2c_software_interface) {
     i2c_software_interface->writeSDA(LOW);
     i2c_software_interface->writeSCL(HIGH);
     i2c_software_interface->writeSCL(LOW);
@@ -66,7 +66,7 @@ static __forceinline void I2C_Software_sendAck(I2C_Software_Interface *i2c_softw
  * @brief  发送非应答信号
  * @param i2c_software_interface I2C读写接口
  */
-static __forceinline void I2C_Software_sendNAck(I2C_Software_Interface *i2c_software_interface) {
+static inline void I2C_Software_sendNAck(I2C_Software_Interface *i2c_software_interface) {
     i2c_software_interface->writeSDA(HIGH);
     i2c_software_interface->writeSCL(HIGH);
     i2c_software_interface->writeSCL(LOW);
@@ -77,8 +77,8 @@ static __forceinline void I2C_Software_sendNAck(I2C_Software_Interface *i2c_soft
  * @param i2c_software_interface I2C读写接口
  * @param  byte: 要发送的字节
  */
-static __forceinline void I2C_Software_sendByte(I2C_Software_Interface *i2c_software_interface,
-                                                uint8_t byte) {
+static inline void I2C_Software_sendByte(I2C_Software_Interface *i2c_software_interface,
+                                         uint8_t byte) {
     for (uint8_t i = 0; i < 8; i++, byte <<= 1) {
         if (byte & 0x80) {
             i2c_software_interface->writeSDA(HIGH);
@@ -96,7 +96,7 @@ static __forceinline void I2C_Software_sendByte(I2C_Software_Interface *i2c_soft
  * @param i2c_software_interface I2C读写接口
  * @return 读取到的字节数据
  */
-static __forceinline uint8_t I2C_Software_readByte(I2C_Software_Interface *i2c_software_interface) {
+static inline uint8_t I2C_Software_readByte(I2C_Software_Interface *i2c_software_interface) {
     uint8_t byte = 0;
 
     i2c_software_interface->writeSDA(HIGH);

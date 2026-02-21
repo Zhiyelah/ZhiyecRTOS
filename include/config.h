@@ -11,7 +11,7 @@
 #define CONFIG_SYSTICK_RATE_HZ 1000
 
 /* 配置CPU时钟频率 */
-#define CONFIG_CPU_CLOCK_HZ 168000000
+#define CONFIG_CPU_CLOCK_HZ 72000000
 
 /* 配置SysTick中断入口 */
 #define CONFIG_SYSTICK_HANDLER_PORT SysTick_Handler
@@ -31,13 +31,13 @@
 /* 配置内核中断优先级(SysTick等) */
 #define CONFIG_KERNEL_INTERRUPT_PRIORITY (CONFIG_SHIELDABLE_INTERRUPT_MAX_PRIORITY - 1)
 
+/* 是否开启硬件加速任务切换 */
+#define ENABLE_HARDWARE_ACCELERATED_TASK_SWITCHING 1
+
 /* 是否使用动态内存分配 */
 #define USE_DYNAMIC_MEMORY_ALLOCATION 0
 
-/*      配置内存池大小(当启用动态内存分配时有效) */
-/*   */ #define CONFIG_MEMORYPOOL_SIZE 4096
-
-/*      配置默认的任务栈大小(启用动态内存分配且未指定任务栈大小时) */
-/*   */ #define CONFIG_DEFAULT_TASK_STACK_SIZE 128
+/*****/ /* 配置内存池大小(当启用动态内存分配时有效) */
+/*****/ #define CONFIG_MEMORYPOOL_SIZE 4096
 
 #endif /* _ZHIYEC_CONFIG_H */

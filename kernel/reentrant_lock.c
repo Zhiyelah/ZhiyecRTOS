@@ -1,7 +1,6 @@
 #include <zhiyec/assert.h>
 #include <zhiyec/mutex.h>
 #include <zhiyec/reentrant_lock.h>
-#include <zhiyec/task.h>
 
 struct ReentrantLock {
     /* 基于互斥锁 */
@@ -12,7 +11,7 @@ struct ReentrantLock {
 
 static_assert(ReentrantLock_byte == sizeof(struct ReentrantLock) + Mutex_byte, "size mismatch");
 
-struct ReentrantLock *ReentrantLock_init(void *const lock_mem) {
+struct ReentrantLock *ReentrantLock_init(void *const lock_mem, const enum TaskPriority ceiling_priority) {
     if (!lock_mem) {
         return NULL;
     }
@@ -22,7 +21,7 @@ struct ReentrantLock *ReentrantLock_init(void *const lock_mem) {
 
     /* 初始化互斥锁 */
     void *mutex_mem = lock + 1;
-    lock->mutex = Mutex_init(mutex_mem);
+    lock->mutex = Mutex_init(mutex_mem, ceiling_priority);
 
     return lock;
 }

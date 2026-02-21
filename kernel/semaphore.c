@@ -62,7 +62,7 @@ void Semaphore_acquire(struct Semaphore *const sem) {
 
     if (sem->state < 0) {
         /* 进入阻塞 */
-        struct SListHead *const front_node = TaskList_removeFront(Task_getType(Task_currentTask()));
+        struct SListHead *const front_node = TaskList_removeFront(Task_getPriority(Task_currentTask()));
 
         if (front_node) {
             QueueList_push(sem->tasks_waiting_to_acquire, front_node);
@@ -86,7 +86,7 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
         return false;
     }
 
-    tick_t current_tick = Tick_current();
+    tick_t current_tick = Tick_currentTick();
 
     /* 超时处理 */
     while (true) {
@@ -98,12 +98,12 @@ bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout) {
         }
 
         if (timeout > 0) {
-            if (!Tick_after(Tick_current(), current_tick + 1)) {
+            if (!Tick_after(Tick_currentTick(), current_tick + 1)) {
                 Task_yield();
                 continue;
             }
 
-            current_tick = Tick_current();
+            current_tick = Tick_currentTick();
             --timeout;
         } else {
             return false;
@@ -135,7 +135,7 @@ void Semaphore_release(struct Semaphore *const sem) {
             struct SListHead *const node = QueueList_front(sem->tasks_waiting_to_acquire);
             QueueList_pop(sem->tasks_waiting_to_acquire);
 
-            TaskList_append(Task_getType(Task_fromTaskNode(node)), node);
+            TaskList_append(Task_getPriority(Task_fromTaskNode(node)), node);
         }
     }
 

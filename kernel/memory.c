@@ -1,7 +1,6 @@
 #include <../kernel/atomic.h>
 #include <../kernel/port.h>
 #include <config.h>
-#include <zhiyec/compiler.h>
 #include <zhiyec/memory.h>
 #include <zhiyec/task.h>
 #include <zhiyec/types.h>
@@ -27,7 +26,7 @@ static struct MemoryBlockInfo *memory_block_head = NULL;
 const static size_t MEMORY_BLOCK_STRUCT_SIZE = (sizeof(struct MemoryBlockInfo) + (BYTE_ALIGNMENT - 1)) & ~(BYTE_ALIGNMENT - 1);
 
 /* 内存池初始化 */
-static INLINE void MemoryPool_init() {
+static inline void MemoryPool_init() {
     size_t memory_pool_addr = (size_t)memory_pool;
 
     /* 内存对齐 */

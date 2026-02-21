@@ -9,6 +9,7 @@
 #define _ZHIYEC_REENTRANTLOCK_H
 
 #include <stdbool.h>
+#include <zhiyec/task.h>
 #include <zhiyec/tick.h>
 
 struct ReentrantLock;
@@ -18,9 +19,10 @@ struct ReentrantLock;
 /**
  * @brief 初始化可重入锁
  * @param lock_mem 对象内存指针
+ * @param ceiling_priority 天花板优先级(请求该锁的任务中最高的任务优先级)
  * @return 对象指针
  */
-struct ReentrantLock *ReentrantLock_init(void *const lock_mem);
+struct ReentrantLock *ReentrantLock_init(void *const lock_mem, const enum TaskPriority ceiling_priority);
 
 /**
  * @brief 获得锁
