@@ -22,10 +22,10 @@
  *      b. 延时10us
  */
 typedef struct {
-    uint8_t (*readSDA)(void);
-    void (*writeSDA)(uint8_t bit);
-    void (*writeSCL)(uint8_t bit);
-} I2C_Software_Interface;
+    uint8_t (*read_sda)(void);
+    void (*write_sda)(uint8_t bit);
+    void (*write_scl)(uint8_t bit);
+} i2c_software_interface;
 
 /**
  * @brief 向I2C设备写入数据
@@ -38,7 +38,7 @@ typedef struct {
  * @param wait_ack_us 等待应答时间
  * @return true: 写入成功; false: 写入失败
  */
-bool I2C_Software_write(I2C_Software_Interface *i2c_software_interface,
+bool i2c_software_write(i2c_software_interface *i2c_software_interface,
                         uint8_t dev_addr,
                         bool has_reg,
                         uint8_t reg_addr,
@@ -57,7 +57,7 @@ bool I2C_Software_write(I2C_Software_Interface *i2c_software_interface,
  * @param wait_ack_us 等待应答时间
  * @return true: 读取成功; false: 读取失败
  */
-bool I2C_Software_read(I2C_Software_Interface *i2c_software_interface,
+bool i2c_software_read(i2c_software_interface *i2c_software_interface,
                        uint8_t dev_addr,
                        bool has_reg,
                        uint8_t reg_addr,

@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <utility/fmt.h>
+#include <zhiyec/assert.h>
 #include <zhiyec/compiler.h>
 #include <zhiyec/kernel.h>
 #include <zhiyec/reentrant_lock.h>
@@ -11,39 +12,35 @@
 #endif
 
 static struct PrintStream current_out;
-static struct ReentrantLock *print_lock = ALLOCATE_STACK(ReentrantLock_byte);
+static struct reentrantlock *print_lock = ALLOCATE_STACK(REENTRANTLOCK_BYTE);
 
-void fmt_init(struct PrintStream *print_stream, const enum TaskPriority print_lock_ceiling_priority) {
+void fmt_init(struct PrintStream *print_stream, const enum task_priority print_lock_ceiling_priority) {
     current_out = *print_stream;
-    ReentrantLock_init(print_lock, print_lock_ceiling_priority);
+    reentrantlock_init(print_lock, print_lock_ceiling_priority);
 }
 
 always_inline void fmt_print(const char *str) {
-    if (current_out.write == NULL) {
-        return;
-    }
+    assert(current_out.write != NULL);
 
-    ReentrantLock_lock(print_lock);
+    reentrantlock_lock(print_lock);
 
     for (size_t i = 0; str[i] != '\0'; ++i) {
         current_out.write(str[i]);
     }
 
-    ReentrantLock_unlock(print_lock);
+    reentrantlock_unlock(print_lock);
 }
 
 void fmt_println(const char *str) {
-    if (current_out.write == NULL) {
-        return;
-    }
+    assert(current_out.write != NULL);
 
-    ReentrantLock_lock(print_lock);
+    reentrantlock_lock(print_lock);
 
     fmt_print(str);
     current_out.write('\r');
     current_out.write('\n');
 
-    ReentrantLock_unlock(print_lock);
+    reentrantlock_unlock(print_lock);
 }
 
 void fmt_printf(const char *format, ...) {
@@ -56,7 +53,7 @@ void fmt_printf(const char *format, ...) {
     /* 计算格式化的字符串长度, +1 为包含'\0'的长度 */
     const size_t string_length = vsnprintf(NULL, 0U, format, args_copy) + 1;
     va_end(args_copy);
-    char *string = Memory_alloc(string_length * sizeof(char));
+    char *string = memory_alloc(string_length * sizeof(char));
     if (string == NULL) {
         return;
     }
@@ -81,6 +78,6 @@ void fmt_printf(const char *format, ...) {
     fmt_print(string);
 
 #if (USE_DYNAMIC_MEMORY_ALLOCATION)
-    Memory_free(string);
+    memory_free(string);
 #endif
 }

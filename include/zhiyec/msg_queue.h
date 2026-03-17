@@ -12,9 +12,9 @@
 #include <stddef.h>
 #include <zhiyec/tick.h>
 
-struct MsgQueue;
+struct msgqueue;
 
-#define MsgQueue_byte 36
+#define MSGQUEUE_BYTE 36
 
 /**
  * @brief 初始化消息队列
@@ -24,7 +24,7 @@ struct MsgQueue;
  * @param buffer_size 缓冲区大小
  * @return 对象指针
  */
-struct MsgQueue *MsgQueue_init(void *const msg_queue_mem,
+struct msgqueue *msgqueue_init(void *const msg_queue_mem,
                                const size_t type_size, void *const buffer, const size_t buffer_size);
 
 /**
@@ -33,7 +33,7 @@ struct MsgQueue *MsgQueue_init(void *const msg_queue_mem,
  * @param data 消息内容
  * @return 是否发送成功
  */
-bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data);
+bool msgqueue_send(struct msgqueue *const msg_queue, const void *const data);
 
 /**
  * @brief 发送消息
@@ -42,7 +42,7 @@ bool MsgQueue_send(struct MsgQueue *const msg_queue, const void *const data);
  * @return 是否发送成功
  * @note 中断安全的版本
  */
-bool MsgQueue_sendFromISR(struct MsgQueue *const msg_queue, const void *const data);
+bool msgqueue_send_from_isr(struct msgqueue *const msg_queue, const void *const data);
 
 /**
  * @brief 接收消息
@@ -50,7 +50,7 @@ bool MsgQueue_sendFromISR(struct MsgQueue *const msg_queue, const void *const da
  * @param data 消息存放变量
  * @return 是否接收成功
  */
-void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
+void msgqueue_receive(struct msgqueue *const msg_queue, void *const data);
 
 /**
  * @brief 尝试接收消息, 超时直接返回失败
@@ -59,7 +59,7 @@ void MsgQueue_receive(struct MsgQueue *const msg_queue, void *const data);
  * @param timeout 超时时间
  * @return 是否接收成功
  */
-bool MsgQueue_tryReceive(struct MsgQueue *const msg_queue, void *const data,
-                         const tick_t timeout);
+bool msgqueue_try_receive(struct msgqueue *const msg_queue, void *const data,
+                          const tick_t timeout);
 
 #endif /* _ZHIYEC_MSGQUEUE_H */

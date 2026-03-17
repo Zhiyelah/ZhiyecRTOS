@@ -12,9 +12,9 @@
 #include <zhiyec/task.h>
 #include <zhiyec/tick.h>
 
-struct ReentrantLock;
+struct reentrantlock;
 
-#define ReentrantLock_byte 36
+#define REENTRANTLOCK_BYTE 36
 
 /**
  * @brief 初始化可重入锁
@@ -22,13 +22,13 @@ struct ReentrantLock;
  * @param ceiling_priority 天花板优先级(请求该锁的任务中最高的任务优先级)
  * @return 对象指针
  */
-struct ReentrantLock *ReentrantLock_init(void *const lock_mem, const enum TaskPriority ceiling_priority);
+struct reentrantlock *reentrantlock_init(void *const lock_mem, const enum task_priority ceiling_priority);
 
 /**
  * @brief 获得锁
  * @param lock 可重入锁对象
  */
-void ReentrantLock_lock(struct ReentrantLock *const lock);
+void reentrantlock_lock(struct reentrantlock *const lock);
 
 /**
  * @brief 尝试获得锁
@@ -36,12 +36,12 @@ void ReentrantLock_lock(struct ReentrantLock *const lock);
  * @param timeout 超时时间
  * @return 是否成功获得锁
  */
-bool ReentrantLock_tryLock(struct ReentrantLock *const lock, const tick_t timeout);
+bool reentrantlock_try_lock(struct reentrantlock *const lock, const tick_t timeout);
 
 /**
  * @brief 释放锁
  * @param lock 可重入锁对象
  */
-void ReentrantLock_unlock(struct ReentrantLock *const lock);
+void reentrantlock_unlock(struct reentrantlock *const lock);
 
 #endif /* _ZHIYEC_REENTRANTLOCK_H */

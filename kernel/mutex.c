@@ -1,78 +1,85 @@
-#include <../kernel/task_list.h>
 #include <stddef.h>
 #include <zhiyec/assert.h>
 #include <zhiyec/compiler.h>
 #include <zhiyec/mutex.h>
 #include <zhiyec/semaphore.h>
+#include <zhiyec/task_list.h>
 
-struct Mutex {
+struct mutex {
     /* 基于信号量 */
-    struct Semaphore *sem;
+    struct semaphore *sem;
     /* 持有锁的任务 */
-    struct TaskStruct *owner;
+    struct task_struct *owner;
     /* 天花板优先级(请求该锁的任务中最高的任务优先级) */
-    enum TaskPriority ceiling_priority;
+    enum task_priority ceiling_priority;
 };
 
-static_assert(Mutex_byte == sizeof(struct Mutex) + Semaphore_byte, "size mismatch");
+static_assert(MUTEX_BYTE == sizeof(struct mutex) + SEMAPHORE_BYTE, "size mismatch");
 
-struct Mutex *Mutex_init(void *const mutex_mem, const enum TaskPriority ceiling_priority) {
-    if (!mutex_mem) {
-        return NULL;
-    }
+struct mutex *mutex_init(void *const mutex_mem, const enum task_priority ceiling_priority) {
+    assert(mutex_mem != NULL);
 
-    struct Mutex *mutex = (struct Mutex *)mutex_mem;
+    struct mutex *mutex = (struct mutex *)mutex_mem;
     mutex->owner = NULL;
     mutex->ceiling_priority = ceiling_priority;
 
     /* 初始化信号量 */
     void *sem_mem = mutex + 1;
-    mutex->sem = Semaphore_initBinary(sem_mem);
+    mutex->sem = semaphore_init_binary(sem_mem);
 
     return mutex;
 }
 
-struct TaskStruct *Mutex_getOwner(struct Mutex *const mutex) {
+struct task_struct *mutex_get_owner(struct mutex *const mutex) {
+    assert(mutex != NULL);
+
     return mutex->owner;
 }
 
-static inline void Mutex_swapPriorityWithTask(struct Mutex *const mutex) {
-    const enum TaskPriority owner_priority = Task_getPriority(mutex->owner);
+static inline void mutex_swap_priority_with_task(struct mutex *const mutex) {
+    const enum task_priority owner_priority = task_get_priority(mutex->owner);
 
-    Task_suspendAll();
-    struct SListHead *const front_node = TaskList_removeFront(owner_priority);
+    task_suspend_all();
+    struct slist_head *const front_node = tasklist_remove_front(owner_priority);
 
     if (front_node) {
-        Task_setPriority(mutex->owner, mutex->ceiling_priority);
-        TaskList_append(mutex->ceiling_priority, front_node);
+        task_set_priority(mutex->owner, mutex->ceiling_priority);
+        tasklist_append(mutex->ceiling_priority, front_node);
         mutex->ceiling_priority = owner_priority;
     }
-    Task_resumeAll();
+    task_resume_all();
 }
 
-static always_inline void Mutex_doLock(struct Mutex *const mutex) {
-    mutex->owner = Task_currentTask();
-    Mutex_swapPriorityWithTask(mutex);
+static always_inline void mutex_do_lock(struct mutex *const mutex) {
+    mutex->owner = task_get_current();
+    mutex_swap_priority_with_task(mutex);
 }
 
-void Mutex_lock(struct Mutex *const mutex) {
-    Semaphore_acquire(mutex->sem);
-    Mutex_doLock(mutex);
+void mutex_lock(struct mutex *const mutex) {
+    assert(mutex != NULL);
+
+    semaphore_acquire(mutex->sem);
+    mutex_do_lock(mutex);
 }
 
-bool Mutex_tryLock(struct Mutex *const mutex, const tick_t timeout) {
-    if (Semaphore_tryAcquire(mutex->sem, timeout)) {
-        Mutex_doLock(mutex);
+bool mutex_try_lock(struct mutex *const mutex, const tick_t timeout) {
+    assert(mutex != NULL);
+
+    if (semaphore_try_acquire(mutex->sem, timeout)) {
+        mutex_do_lock(mutex);
         return true;
     }
     return false;
 }
 
-void Mutex_unlock(struct Mutex *const mutex) {
-    if (mutex->owner == Task_currentTask()) {
-        Mutex_swapPriorityWithTask(mutex);
+void mutex_unlock(struct mutex *const mutex) {
+    assert(mutex != NULL);
 
-        mutex->owner = NULL;
-        Semaphore_release(mutex->sem);
-    }
+    /* 未持有锁的任务意外释放了锁 */
+    assert(mutex->owner == task_get_current());
+
+    mutex_swap_priority_with_task(mutex);
+
+    mutex->owner = NULL;
+    semaphore_release(mutex->sem);
 }

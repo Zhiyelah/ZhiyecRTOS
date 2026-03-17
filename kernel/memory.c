@@ -1,6 +1,6 @@
-#include <../kernel/atomic.h>
-#include <../kernel/port.h>
+#include <asm/port.h>
 #include <config.h>
+#include <zhiyec/atomic.h>
 #include <zhiyec/memory.h>
 #include <zhiyec/task.h>
 #include <zhiyec/types.h>
@@ -11,8 +11,8 @@
 #error please set USE_DYNAMIC_MEMORY_ALLOCATION to 1 or remove this file from your project.
 #endif
 
-struct MemoryBlockInfo {
-    struct MemoryBlockInfo *next_mem_block;
+struct memory_block_info {
+    struct memory_block_info *next_mem_block;
     size_t size;
 };
 
@@ -20,13 +20,13 @@ static byte memory_pool[MEMORYPOOL_SIZE];
 static byte *memory_pool_end = NULL;
 static size_t memory_pool_size = MEMORYPOOL_SIZE;
 
-static struct MemoryBlockInfo *memory_block_head = NULL;
+static struct memory_block_info *memory_block_head = NULL;
 
 /* 内存块信息结构体大小(已对齐) */
-const static size_t MEMORY_BLOCK_STRUCT_SIZE = (sizeof(struct MemoryBlockInfo) + (BYTE_ALIGNMENT - 1)) & ~(BYTE_ALIGNMENT - 1);
+const static size_t MEMORY_BLOCK_STRUCT_SIZE = (sizeof(struct memory_block_info) + (BYTE_ALIGNMENT - 1)) & ~(BYTE_ALIGNMENT - 1);
 
 /* 内存池初始化 */
-static inline void MemoryPool_init() {
+static inline void memory_pool_init() {
     size_t memory_pool_addr = (size_t)memory_pool;
 
     /* 内存对齐 */
@@ -35,7 +35,7 @@ static inline void MemoryPool_init() {
         memory_pool_size -= memory_pool_addr - (size_t)memory_pool;
     }
 
-    struct MemoryBlockInfo *const mem_block_info = (struct MemoryBlockInfo *)memory_pool_addr;
+    struct memory_block_info *const mem_block_info = (struct memory_block_info *)memory_pool_addr;
     mem_block_info->next_mem_block = NULL;
     mem_block_info->size = MEMORY_BLOCK_STRUCT_SIZE;
     memory_block_head = mem_block_info;
@@ -47,10 +47,10 @@ static inline void MemoryPool_init() {
 }
 
 /* 使用首次适应算法分配内存 */
-void *Memory_alloc(size_t size) {
+void *memory_alloc(size_t size) {
     if (memory_block_head == NULL) {
         atomic({
-            MemoryPool_init();
+            memory_pool_init();
         });
     }
 
@@ -68,9 +68,9 @@ void *Memory_alloc(size_t size) {
         return NULL;
     }
 
-    Atomic_begin();
+    atomic_begin();
 
-    struct MemoryBlockInfo *current_mem_block = memory_block_head;
+    struct memory_block_info *current_mem_block = memory_block_head;
 
     while (current_mem_block->next_mem_block != NULL) {
         const byte *const next = (byte *)(current_mem_block->next_mem_block);
@@ -86,32 +86,32 @@ void *Memory_alloc(size_t size) {
     /* 找不到可用的内存碎片空间且末尾空间不足 */
     if ((current_mem_block->next_mem_block == NULL) &&
         (allocated_mem_head + size > memory_pool_end)) {
-        Atomic_end();
+        atomic_end();
         return NULL;
     }
 
-    struct MemoryBlockInfo *const mem_block_info = (struct MemoryBlockInfo *)allocated_mem_head;
+    struct memory_block_info *const mem_block_info = (struct memory_block_info *)allocated_mem_head;
 
     mem_block_info->next_mem_block = current_mem_block->next_mem_block;
     mem_block_info->size = size;
     current_mem_block->next_mem_block = mem_block_info;
     memory_pool_size -= size;
 
-    Atomic_end();
+    atomic_end();
 
     return (void *)(allocated_mem_head + MEMORY_BLOCK_STRUCT_SIZE);
 }
 
 /* 释放内存 */
-void Memory_free(void *const ptr) {
+void memory_free(void *const ptr) {
     if (ptr == NULL) {
         return;
     }
 
-    const struct MemoryBlockInfo *const mem_block_info = (struct MemoryBlockInfo *)((byte *)ptr - MEMORY_BLOCK_STRUCT_SIZE);
+    const struct memory_block_info *const mem_block_info = (struct memory_block_info *)((byte *)ptr - MEMORY_BLOCK_STRUCT_SIZE);
 
     atomic({
-        struct MemoryBlockInfo *prev_mem_block = memory_block_head;
+        struct memory_block_info *prev_mem_block = memory_block_head;
         while (prev_mem_block->next_mem_block != mem_block_info) {
             prev_mem_block = prev_mem_block->next_mem_block;
         }
@@ -121,6 +121,6 @@ void Memory_free(void *const ptr) {
     });
 }
 
-size_t Memory_getFreeSize() {
+size_t memory_get_free_size() {
     return memory_pool_size;
 }

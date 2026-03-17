@@ -2,42 +2,44 @@
 #include <zhiyec/mutex.h>
 #include <zhiyec/reentrant_lock.h>
 
-struct ReentrantLock {
+struct reentrantlock {
     /* 基于互斥锁 */
-    struct Mutex *mutex;
+    struct mutex *mutex;
     /* 锁计数器 */
     volatile int state;
 };
 
-static_assert(ReentrantLock_byte == sizeof(struct ReentrantLock) + Mutex_byte, "size mismatch");
+static_assert(REENTRANTLOCK_BYTE == sizeof(struct reentrantlock) + MUTEX_BYTE, "size mismatch");
 
-struct ReentrantLock *ReentrantLock_init(void *const lock_mem, const enum TaskPriority ceiling_priority) {
-    if (!lock_mem) {
-        return NULL;
-    }
+struct reentrantlock *reentrantlock_init(void *const lock_mem, const enum task_priority ceiling_priority) {
+    assert(lock_mem != NULL);
 
-    struct ReentrantLock *lock = (struct ReentrantLock *)lock_mem;
+    struct reentrantlock *lock = (struct reentrantlock *)lock_mem;
     lock->state = 0;
 
     /* 初始化互斥锁 */
     void *mutex_mem = lock + 1;
-    lock->mutex = Mutex_init(mutex_mem, ceiling_priority);
+    lock->mutex = mutex_init(mutex_mem, ceiling_priority);
 
     return lock;
 }
 
-void ReentrantLock_lock(struct ReentrantLock *const lock) {
-    if (Mutex_getOwner(lock->mutex) != Task_currentTask()) {
-        Mutex_lock(lock->mutex);
+void reentrantlock_lock(struct reentrantlock *const lock) {
+    assert(lock != NULL);
+
+    if (mutex_get_owner(lock->mutex) != task_get_current()) {
+        mutex_lock(lock->mutex);
     }
 
-    if (Mutex_getOwner(lock->mutex) == Task_currentTask()) {
+    if (mutex_get_owner(lock->mutex) == task_get_current()) {
         ++(lock->state);
     }
 }
 
-bool ReentrantLock_tryLock(struct ReentrantLock *const lock, const tick_t timeout) {
-    if (Mutex_tryLock(lock->mutex, timeout)) {
+bool reentrantlock_try_lock(struct reentrantlock *const lock, const tick_t timeout) {
+    assert(lock != NULL);
+
+    if (mutex_try_lock(lock->mutex, timeout)) {
         ++(lock->state);
 
         return true;
@@ -45,12 +47,14 @@ bool ReentrantLock_tryLock(struct ReentrantLock *const lock, const tick_t timeou
     return false;
 }
 
-void ReentrantLock_unlock(struct ReentrantLock *const lock) {
-    if (Mutex_getOwner(lock->mutex) == Task_currentTask()) {
+void reentrantlock_unlock(struct reentrantlock *const lock) {
+    assert(lock != NULL);
+
+    if (mutex_get_owner(lock->mutex) == task_get_current()) {
         --(lock->state);
     }
 
     if (lock->state == 0) {
-        Mutex_unlock(lock->mutex);
+        mutex_unlock(lock->mutex);
     }
 }

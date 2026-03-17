@@ -10,6 +10,6 @@
 /**
  * @brief 微秒延时
  */
-void Delay_us(const unsigned long us);
+void delay_us(const unsigned long us);
 
 #endif /* _DELAY_H */

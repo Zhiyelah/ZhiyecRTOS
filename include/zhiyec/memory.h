@@ -14,18 +14,18 @@
  * @brief 分配内存
  * @param size 分配的内存大小
  */
-void *Memory_alloc(size_t size);
+void *memory_alloc(size_t size);
 
 /**
  * @brief 释放内存
  * @param ptr 通过Memory_alloc分配的内存指针
  */
-void Memory_free(void *const ptr);
+void memory_free(void *const ptr);
 
 /**
  * @brief 获取空闲内存大小
  * @return 空闲内存大小
  */
-size_t Memory_getFreeSize(void);
+size_t memory_get_free_size(void);
 
 #endif /* _ZHIYEC_MEMORY_H */

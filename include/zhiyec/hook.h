@@ -11,9 +11,9 @@
 /* 注册钩子 */
 
 /* SysTick中断钩子 */
-#define Hook_isrSysTickEntry() ((void)0)
+#define hook_isr_systick_entry() ((void)0)
 
 /* 空闲任务钩子 */
-#define Hook_idleTaskRunning() ((void)0)
+#define hook_idle_task_running() ((void)0)
 
 #endif /* _ZHIYEC_HOOK_H */

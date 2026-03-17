@@ -1,8 +1,7 @@
-#include <math.h>
 #include <utility/pid_controller.h>
 #include <zhiyec/assert.h>
 
-struct PIDController {
+struct pid_controller {
     float kp;
     float ki;
     float kd;
@@ -14,16 +13,14 @@ struct PIDController {
     float sum_error;
 };
 
-static_assert(PIDController_byte == sizeof(struct PIDController), "size mismatch");
+static_assert(PIDCONTROLLER_BYTE == sizeof(struct pid_controller), "size mismatch");
 
 /* 初始化PID控制器 */
-struct PIDController *PIDController_init(void *const pid_mem,
-                                         const float kp, const float ki, const float kd) {
-    if (!pid_mem) {
-        return 0;
-    }
+struct pid_controller *pid_controller_init(void *const pid_mem,
+                                           const float kp, const float ki, const float kd) {
+    assert(pid_mem);
 
-    struct PIDController *pid = (struct PIDController *)pid_mem;
+    struct pid_controller *pid = (struct pid_controller *)pid_mem;
 
     pid->kp = kp;
     pid->ki = ki;
@@ -31,12 +28,13 @@ struct PIDController *PIDController_init(void *const pid_mem,
     pid->pid_output = 0;
     pid->prev_error = 0;
     pid->sum_error = 0;
+
     return pid;
 }
 
 /* 计算PID */
-float PIDController_calculateOutput(struct PIDController *const pid,
-                                    const float error, const float dt) {
+float pid_controller_cal_output(struct pid_controller *const pid,
+                                const float error, const float dt) {
 
     pid->sum_error += error * dt;
 
@@ -46,7 +44,7 @@ float PIDController_calculateOutput(struct PIDController *const pid,
     const float integral = pid->ki * pid->sum_error;
     /* 微分项 */
     float derivative = 0.0f;
-    if (fabs(dt) > 0.001f) {
+    if (dt != 0.0f) {
         derivative = pid->kd * ((error - pid->prev_error) / dt);
     }
 
@@ -58,6 +56,6 @@ float PIDController_calculateOutput(struct PIDController *const pid,
 }
 
 /* 获取PID输出 */
-float PIDController_getOutput(const struct PIDController *const pid) {
+float pid_controller_get_output(const struct pid_controller *const pid) {
     return pid->pid_output;
 }

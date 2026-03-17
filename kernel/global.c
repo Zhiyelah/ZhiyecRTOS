@@ -15,7 +15,7 @@ volatile int interrupt_disabled_nesting = 0;
  * @brief 任务列表索引
  * @param index 任务优先级
  */
-struct QueueList kernel_task_list[TASKPRIORITY_NUM];
+struct queue_list kernel_task_list[TASKPRIORITY_NUM];
 
 /**
  * @brief 任务列表位图

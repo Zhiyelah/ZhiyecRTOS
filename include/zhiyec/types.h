@@ -18,14 +18,14 @@ typedef unsigned long tick_t;
 typedef signed long stick_t;
 
 /* 单向链表 */
-struct SListHead {
-    struct SListHead *next;
+struct slist_head {
+    struct slist_head *next;
 };
 
 /* 双向链表 */
-struct ListHead {
-    struct ListHead *prev;
-    struct ListHead *next;
+struct list_head {
+    struct list_head *prev;
+    struct list_head *next;
 };
 
 #endif /* _ZHIYEC_TYPES_H */

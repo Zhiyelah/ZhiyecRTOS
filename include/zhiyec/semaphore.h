@@ -11,16 +11,16 @@
 #include <stdbool.h>
 #include <zhiyec/tick.h>
 
-struct Semaphore;
+struct semaphore;
 
-#define Semaphore_byte 16
+#define SEMAPHORE_BYTE 16
 
 /**
  * @brief 初始化为二值信号量
  * @param sem_mem 对象内存指针
  * @return 对象指针
  */
-struct Semaphore *Semaphore_initBinary(void *const sem_mem);
+struct semaphore *semaphore_init_binary(void *const sem_mem);
 
 /**
  * @brief 初始化为计数信号量
@@ -29,14 +29,14 @@ struct Semaphore *Semaphore_initBinary(void *const sem_mem);
  * @param init_value 初始计数值
  * @return 对象指针
  */
-struct Semaphore *Semaphore_initCounting(void *const sem_mem,
-                                         const int max_value, const unsigned int init_value);
+struct semaphore *semaphore_init_counting(void *const sem_mem,
+                                          const int max_value, const unsigned int init_value);
 
 /**
  * @brief 获得信号量
  * @param sem 信号量对象
  */
-void Semaphore_acquire(struct Semaphore *const sem);
+void semaphore_acquire(struct semaphore *const sem);
 
 /**
  * @brief 尝试获得信号量, 超时后返回
@@ -44,26 +44,26 @@ void Semaphore_acquire(struct Semaphore *const sem);
  * @param timeout 超时时间
  * @return 是否成功获得信号量
  */
-bool Semaphore_tryAcquire(struct Semaphore *const sem, tick_t timeout);
+bool semaphore_try_acquire(struct semaphore *const sem, tick_t timeout);
 
 /**
  * @brief 释放信号量
  * @param sem 信号量对象
  */
-void Semaphore_release(struct Semaphore *const sem);
+void semaphore_release(struct semaphore *const sem);
 
 /**
  * @brief 获得信号量
  * @param sem 信号量对象
  * @note 中断安全的版本
  */
-bool Semaphore_acquireFromISR(struct Semaphore *const sem);
+bool semaphore_acquire_from_isr(struct semaphore *const sem);
 
 /**
  * @brief 释放信号量
  * @param sem 信号量对象
  * @note 中断安全的版本
  */
-void Semaphore_releaseFromISR(struct Semaphore *const sem);
+void semaphore_release_from_isr(struct semaphore *const sem);
 
 #endif /* _ZHIYEC_SEMAPHORE_H */

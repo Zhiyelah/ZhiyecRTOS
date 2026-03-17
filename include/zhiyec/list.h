@@ -5,87 +5,93 @@
 
 /* 双向链表API */
 
-#define List_init(head) ({ \
-    (head)->prev = (head); \
-    (head)->next = (head); \
-})
+#define list_init(head)        \
+    do {                       \
+        (head)->prev = (head); \
+        (head)->next = (head); \
+    } while (0)
 
-#define List_insert(pos, node) ({ \
-    (pos)->next->prev = (node);   \
-    (node)->next = (pos)->next;   \
-    (pos)->next = (node);         \
-    (node)->prev = (pos);         \
-})
+#define list_insert(pos, node)      \
+    do {                            \
+        (pos)->next->prev = (node); \
+        (node)->next = (pos)->next; \
+        (pos)->next = (node);       \
+        (node)->prev = (pos);       \
+    } while (0)
 
-#define List_push_back(head, node) (((head) != NULL) && ({                     \
-                                        class Node *const tail = (head)->prev; \
-                                        Node_insert(tail, (node));             \
-                                    }))
+#define list_push_back(head, node)                       \
+    do {                                                 \
+        if ((head) != NULL) {                            \
+            struct list_head *const tail = (head)->prev; \
+            list_insert(tail, (node));                   \
+        }                                                \
+    } while (0)
 
-#define List_remove(node) ({           \
-    (node)->prev->next = (node)->next; \
-    (node)->next->prev = (node)->prev; \
-    (node)->prev = NULL;               \
-    (node)->next = NULL;               \
-})
+#define list_remove(node)                  \
+    do {                                   \
+        (node)->prev->next = (node)->next; \
+        (node)->next->prev = (node)->prev; \
+        (node)->prev = NULL;               \
+        (node)->next = NULL;               \
+    } while (0)
 
 /* 结束 */
 
-struct StackList {
-    struct SListHead *head;
+struct stack_list {
+    struct slist_head *head;
 };
 
-#define StackList_init(stack_list) \
-    do {                           \
-        (stack_list).head = NULL;  \
+#define stack_list_init(stack_list) \
+    do {                            \
+        (stack_list).head = NULL;   \
     } while (0)
 
-#define StackList_front(stack_list) ((stack_list).head)
+#define stack_list_front(stack_list) ((stack_list).head)
 
-#define StackList_isEmpty(stack_list) ((stack_list).head == NULL)
+#define stack_list_is_empty(stack_list) ((stack_list).head == NULL)
 
-#define StackList_push(stack_list, node)  \
+#define stack_list_push(stack_list, node) \
     do {                                  \
         (node)->next = (stack_list).head; \
         (stack_list).head = (node);       \
     } while (0)
 
-#define StackList_pop(stack_list)                    \
+#define stack_list_pop(stack_list)                   \
     do {                                             \
         (stack_list).head = (stack_list).head->next; \
     } while (0)
 
-struct QueueList {
-    struct SListHead head;
-    struct SListHead *tail;
+struct queue_list {
+    struct slist_head head;
+    struct slist_head *tail;
 };
 
-#define QueueList_init(queue_list)                \
+#define queue_list_init(queue_list)               \
     do {                                          \
         (queue_list).tail = &((queue_list).head); \
     } while (0)
 
-#define QueueList_front(queue_list) ((queue_list).head.next)
+#define queue_list_front(queue_list) ((queue_list).head.next)
 
-#define QueueList_back(queue_list) ((queue_list).tail)
+#define queue_list_back(queue_list) ((queue_list).tail)
 
-#define QueueList_isEmpty(queue_list) (&((queue_list).head) == (queue_list).tail)
+#define queue_list_is_empty(queue_list) (&((queue_list).head) == (queue_list).tail)
 
-#define QueueList_push(queue_list, node)             \
+#define queue_list_push(queue_list, node)            \
     do {                                             \
         (node)->next = NULL;                         \
         (queue_list).tail->next = (node);            \
         (queue_list).tail = (queue_list).tail->next; \
     } while (0)
 
-#define QueueList_pop(queue_list)                                         \
-    do {                                                                  \
-        struct SListHead *const front_node = QueueList_front(queue_list); \
-        (queue_list).head.next = front_node->next;                        \
-        if (front_node == (queue_list).tail) {                            \
-            (queue_list).tail = &((queue_list).head);                     \
-        }                                                                 \
-        front_node->next = NULL;                                          \
+#define queue_list_pop(queue_list)                                          \
+    do {                                                                    \
+        struct slist_head *const front_node = queue_list_front(queue_list); \
+        (queue_list).head.next = front_node->next;                          \
+        if (front_node == (queue_list).tail) {                              \
+            (queue_list).tail = &((queue_list).head);                       \
+        }                                                                   \
+        front_node->next = NULL;                                            \
     } while (0)
 
 #endif /* _ZHIYEC_LIST_H */
