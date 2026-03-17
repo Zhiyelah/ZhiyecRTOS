@@ -1,16 +1,17 @@
 
-## 关于
-ZhiyecRTOS 是用于嵌入式微控制器 (MCU) 的实时操作系统内核。适配 ARM Cortex M0-M7 架构。
+## 说明
+ZhiyecRTOS 是用于嵌入式微控制器 (MCU) 的轻量实时操作系统。适配 ARM Cortex M0-M7 架构。
 
 ## 使用
 1. 克隆仓库到本地
 ```bash
 git clone https://github.com/Zhiyelah/ZhiyecRTOS.git
 ```
-2. 将目录文件添加到 C/C++ 工程中
-3. 从 `kernel/arch/` 中选择合适的架构接口文件并放置到 `kernel/` 目录下
-4. 根据目标芯片修改 `config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
-5. 参考以下示例创建任务
+2. 将 `kernel/` 中的文件添加到工程中
+3. 从 `arch/` 中选择合适的架构接口文件添加到工程中
+4. 将 `arch/*/include` 添加到 include 路径中
+5. 根据目标芯片修改 `config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
+6. 参考以下示例创建任务
 
 #### 任务创建示例（使用静态内存分配）
 ```C
@@ -29,14 +30,14 @@ void do_something_task(void *arg) {
 
 int main() {
     /* 创建任务 */
-    Task_create(do_something_task, NULL,
+    task_create(do_something_task, NULL,
                 do_something_task_stack, DO_SOMETHING_TASK_STACK_SIZE,
-                &(struct TaskAttribute){
-                    .priority = TASKPRIORITY_MEDIUM,
+                &(struct task_attribute){
+                    .priority = TASKPRIO_MEDIUM,
                 });
 
     /* 开始调度任务 */
-    return Task_schedule();
+    return task_schedule();
 }
 
 ```
