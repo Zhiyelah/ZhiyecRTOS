@@ -1,19 +1,27 @@
 
-## 说明
-ZhiyecRTOS 是用于嵌入式微控制器 (MCU) 的轻量实时操作系统。适配 ARM Cortex M0-M7 架构。
+## ZhiyecRTOS - Zhiye controller RTOS
+一个专为嵌入式 MCU 设计的轻量实时操作系统 (RTOS)。支持 STM32 等 ARM Cortex-M 架构的 MCU。
 
-## 使用
-1. 克隆仓库到本地
+## 快速开始
+### 1. 克隆仓库到本地
 ```bash
 git clone https://github.com/Zhiyelah/ZhiyecRTOS.git
 ```
-2. 将 `include` 添加到 include 路径中
-3. 将 `kernel/` 中的文件添加到工程中
-4. 从 `arch/` 中选择合适的架构接口文件添加到工程中
-5. 将 `arch/*/include` 添加到 include 路径中
-6. 根据目标芯片修改 `config.h` 中的配置项 (CPU 时钟频率、Tick 中断频率、内存池大小等) 
-7. 参考以下示例创建任务
+### 2. 添加到工程
+1. 将 `include` 添加到编译器的头文件搜索路径。
+2. 将 `kernel/` 下的所有源文件添加到工程编译列表。
+3. 根据目标芯片，从 `arch/` 中选择对应的架构文件 (`port.c`、`isr.c`) 添加到工程。
+4. 将 `arch/<架构>/include` 也添加到头文件搜索路径。
 
+### 3. 配置系统
+根据目标芯片修改 `config.h` 中的配置项：
+
+- CPU时钟频率
+- Tick频率
+- 内存池大小
+- 其他非关键参数
+
+### 4. 创建任务
 #### 任务创建示例（使用静态内存分配）
 ```C
 #include <zhiyec/task.h>
@@ -22,7 +30,6 @@ git clone https://github.com/Zhiyelah/ZhiyecRTOS.git
 stack_t do_something_task_stack[DO_SOMETHING_TASK_STACK_SIZE];
 void do_something_task(void *arg) {
     /* 初始化 */
-    (void)arg;
 
     while (true) {
         /* 做些什么 */
@@ -31,11 +38,15 @@ void do_something_task(void *arg) {
 
 int main() {
     /* 创建任务 */
-    task_create(do_something_task, NULL,
-                do_something_task_stack, DO_SOMETHING_TASK_STACK_SIZE,
-                &(struct task_attribute){
-                    .priority = TASKPRIO_MEDIUM,
-                });
+    task_create(
+        do_something_task,                  /* 任务函数 */
+        NULL,                               /* 任务函数参数 */
+        do_something_task_stack,            /* 任务栈地址 */
+        DO_SOMETHING_TASK_STACK_SIZE,       /* 任务栈大小 */
+        &(struct task_attribute){
+            .priority = TASKPRIO_MEDIUM,    /* 任务优先级 */
+        }
+    );
 
     /* 开始调度任务 */
     return task_schedule();
